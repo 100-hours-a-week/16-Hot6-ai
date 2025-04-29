@@ -9,16 +9,11 @@ class Desk_classifier:
         self.model = load_model(model_path)
         self.threshold = threshold
 
-    def predict(self, img_path: str) -> dict:
+    def predict(self, img_path: str) -> bool:
         img = image.load_img(img_path, target_size = (224, 224))
         x = image.img_to_array(img)
         x = np.expand_dims(x, axis = 0)
         x = preprocess_input(x)
 
         prob = self.model.predict(x)[0][0]
-        result = prob >= self.threshold
-
-        return {
-            "initial_image_url": img_path,
-            "classify": result
-        }
+        return prob >= self.threshold
