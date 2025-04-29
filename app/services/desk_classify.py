@@ -3,7 +3,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-class desk_classifier:
+class Desk_classifier:
     def __init__(self, model_path = '', threshold = 0.5):
         #threshold, model_path 추후 수정
         self.model = load_model(model_path)
@@ -17,7 +17,7 @@ class desk_classifier:
 
         prob = self.model.predict(x)[0][0]
         result = prob >= self.threshold
-        
+
         return {
             "initial_image_url": img_path,
             "classify": result
