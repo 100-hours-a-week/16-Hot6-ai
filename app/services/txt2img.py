@@ -2,73 +2,71 @@ import torch
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from PIL import Image
 from io import BytesIO
+from dotenv import load_dotenv
 import boto3
 import os
+import uuid
 
-# --- S3 설정 ---
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+class Text2Img:
+    def __init__(self, base_model_path: str, vae_path: str, lora_paths: list, adapter_names: list, adapter_weights: list):
+        load_dotenv()
+        self.s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
-# --- 모델 및 경로 ---
-base_model_path = "FluentlyXL-v2.safetensors"
-vae_path = "sdxl_vae_madebyollin.safetensors"
-lora_1 = "ott_fluently.safetensors"
-lora_2 = "3D_Office.safetensors"
+        self.s3_client = boto3.client(
+            "s3",
+            aws_access_key_id = aws_access_key_id,
+            aws_secret_access_key = aws_secret_access_key,
+        )
 
-# --- 모델 로딩 (최초 실행 시 1회) ---
-print("Loading Stable Diffusion XL pipeline...")
-pipe = StableDiffusionXLPipeline.from_single_file(
-    base_model_path,
-    torch_dtype=torch.float16,
-    variant="fp16",
-    use_safetensors=True,
-)
-pipe.to("cuda")
+        self.pipe = StableDiffusionXLPipeline.from_single_file(
+            base_model_path,
+            torch_dtype = torch.float16,
+            variant = "fp16",
+            use_safetensors = True,
+        )
+        self.pipe.to("cuda")
 
-if os.path.exists(vae_path):
-    pipe.vae = AutoencoderKL.from_single_file(
-        vae_path, torch_dtype=torch.float16
-    ).to("cuda")
+        if vae_path and os.path.exists(vae_path):
+            self.pipe.vae = AutoencoderKL.from_single_file(
+                vae_path,
+                torch_dtype = torch.float16
+            ).to("cuda")
 
-pipe.load_lora_weights(lora_1, weight_name="default", adapter_name="ott_lora")
-pipe.load_lora_weights(lora_2, weight_name="default", adapter_name="3d_officer")
-pipe.set_adapters(["ott_lora", "3d_officer"], [0.8, 0.4]) ## 추후 weight 수정
-pipe.fuse_lora()
-print("Model loaded and ready.")
+        for path, name in zip(lora_paths, adapter_names):
+            self.pipe.load_lora_weights(path, weight_name = "defalut", adapter_names = name)
 
-# --- S3 클라이언트 ---
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-)
+        self.pipe.set_adapters(adapter_names, adapter_weights)
+        self.pipe.fuse_lora()
 
-# --- 이미지 생성 및 업로드 함수 ---
-def generate_image(prompt: str) -> str:
-    negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
+        print("txt2img generator initialized and lora fused.")
 
-    image = pipe(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        num_inference_steps=30,
-        guidance_scale=7.5,
-        width=1024,
-        height=1024
-    ).images[0]
+    def generate_img(self, prompt: str, negative_prompt: str = None) -> str:
+        if negative_prompt is None:
+            negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
+        
+        image = self.pipe(
+            prompt = prompt,
+            negative_prompt = negative_prompt,
+            num_inference_steps = 30,
+            guidance_scale = 7.5,
+            width = 1024,
+            height = 1024
+        ).image[0]
 
-    buffer = BytesIO()
-    image.save(buffer, format="PNG")
-    buffer.seek(0)
+        buffer = BytesIO()
+        image.save(buffer, format = "PNG")
+        buffer.seek(0)
 
-    s3_key = f"S3 이미지 저장 전략.png"
+        unique_id = str(uuid.uuid4())
+        s3_key = f"onthe-top/assets/images/{unique_id}.png"
 
-    s3_client.upload_fileobj(
-        buffer,
-        S3_BUCKET_NAME,
-        s3_key,
-        ExtraArgs={"ContentType": "image/png"}
-    )
+        self.s3_client.upload_fileobj(
+            buffer,
+            self.s3_bucket_name,
+            s3_key,
+            ExtraArgs={"ContentType": "image/png"}
+        )
 
-    image_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
-    return image_url
+        return f"https://{self.s3_bucket_name}.s3.amazonaws.com/{s3_key}"
