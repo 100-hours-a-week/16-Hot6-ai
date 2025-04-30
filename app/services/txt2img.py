@@ -7,7 +7,7 @@ import boto3
 import os
 import uuid
 
-class Text2Img:
+class Txt2Img:
     def __init__(self, base_model_path: str, vae_path: str, lora_paths: list, adapter_names: list, adapter_weights: list):
         load_dotenv()
         self.s3_bucket_name = os.getenv("S3_BUCKET_NAME")
