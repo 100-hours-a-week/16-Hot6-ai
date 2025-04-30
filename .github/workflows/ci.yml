@@ -29,7 +29,6 @@ jobs:
         run: |
           mkdir -p artifact
           cp -r app artifact/
-          cp -r alembic artifact/
           cp requirements.txt artifact/
 
       - name: Upload FastAPI artifact
