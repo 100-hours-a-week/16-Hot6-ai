@@ -1,7 +1,7 @@
 import os
 import requests
 # fastapi_project/app/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.response import JSONResponse
 from .core.config import get_settings
@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 # 모듈 호출
 from services.desk_classify import Desk_classifier
-
+from services.txt2img import Txt2Img
 
 settings = get_settings()
 
@@ -66,3 +66,30 @@ async def classify_image(req: ClassifyRequest):
         "initial_image_url": image_url,
         "classify": is_desk
     })
+###
+
+# Text to Image
+
+class PromptRequest(BaseModel):
+    prompt: str
+
+generator = Txt2Img(
+    base_model_path="",
+    vae_path="",
+    lora_paths=[
+        "",
+        ""
+    ],
+    adapter_names=["ott_lora", "3d_lora"],
+    adapter_weights=[0.8, 0.4],
+)
+
+@app.post("/generate")
+def generate_image(request: PromptRequest):
+    try:
+        url = generator.generate_img(request.prompt)
+        return {"image_url": url}
+    except Exception as e:
+        raise HTTPException(status_code = 500, detail = str(e))
+
+###
