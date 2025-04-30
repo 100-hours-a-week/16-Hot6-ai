@@ -45,7 +45,7 @@ s3_client = boto3.client(
 )
 
 # --- 이미지 생성 및 업로드 함수 ---
-def generate_and_upload_image(prompt: str) -> str:
+def generate_image(prompt: str) -> str:
     negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
 
     image = pipe(
