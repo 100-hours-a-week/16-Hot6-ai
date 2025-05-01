@@ -16,4 +16,4 @@ class Desk_classifier:
         x = preprocess_input(x)
 
         prob = self.model.predict(x)[0][0]
-        return prob >= self.threshold
+        return bool(prob >= self.threshold)
