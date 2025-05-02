@@ -6,7 +6,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 class Desk_classifier:
     def __init__(self, threshold = 0.5):
         #threshold, model_path 추후 수정
-        model_path = '/Users/gimbuyeong/Documents/OTT_model/desk_classify.h5'
+        model_path = ''
         self.model = load_model(model_path)
         self.threshold = threshold
 
