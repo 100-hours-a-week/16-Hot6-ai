@@ -15,11 +15,11 @@ from naverapi import NaverAPI
 app = FastAPI()
 
 class ImageRequest(BaseModel):
-    image_url: str
+    initial_image_url: str
 
 @app.post("/classify")
 async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
-    image_url = req.image_url
+    image_url = req.initial_image_url
 
     # 1. 이미지 다운로드
     tmp_filename = f"tmp_{uuid.uuid4()}.jpg"
@@ -61,8 +61,8 @@ def run_image_generate(image_url: str, tmp_filename: str):
         # 4. 백엔드로 전송
         backend_url = os.getenv("RESULT_POST_URL")
         payload = {
-            "original_image_url": image_url,
-            "generated_image_url": generated_image_url,
+            "initial_image_url": image_url,
+            "processed_image_url": generated_image_url,
             "products": products
         }
 
