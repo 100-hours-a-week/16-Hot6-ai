@@ -50,8 +50,8 @@ class NaverAPI:
                 "title": title,
                 "price": int(product["lprice"]),
                 "mall": mall,
-                "category3": cat3,
-                "category4": cat4,
+                "main_category": cat3,
+                "sub_category": cat4,
                 "link": product.get("link"),
                 "image": product.get("image")
             })
