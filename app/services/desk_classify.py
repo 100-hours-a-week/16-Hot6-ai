@@ -2,10 +2,14 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg16 import preprocess_input
+import os
+from dotenv import load_dotenv
 
 class Desk_classifier:
-    def __init__(self, model_path = '', threshold = 0.5):
+    def __init__(self, threshold = 0.5):
+        load_dotenv()
         #threshold, model_path 추후 수정
+        model_path = os.getenv("CNN_MODEL")
         self.model = load_model(model_path)
         self.threshold = threshold
 
