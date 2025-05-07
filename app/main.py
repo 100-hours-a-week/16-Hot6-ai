@@ -50,9 +50,6 @@ def run_image_generate(image_url: str, tmp_filename: str):
         print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
         # 1. 이미지 → 텍스트
         img2txt = ImageToText()
-        if not prompt:
-            print("[ERROR] Step 1 실패: 프롬프트 생성 실패, 파이프라인 중단")
-            return
         
         prompt = img2txt.generate_text(image_url)
         print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
