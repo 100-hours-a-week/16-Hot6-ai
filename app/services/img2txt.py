@@ -1,5 +1,7 @@
 import torch
 import os
+import requests
+from io import BytesIO
 from PIL import Image
 from transformers import PreTrainedTokenizerFast, Blip2Processor, Blip2ForConditionalGeneration
 import openai
@@ -34,11 +36,14 @@ class ImageToText:
                 prompt = prompt.replace(word, "")
         return prompt.strip()
 
-    def generate_text(self, image_path: str):
+    def generate_text(self, url: str):
         try:
+            print(f"[DEBUG] 전달된 url: {url}")
             # BLIP2 Caption 생성
-            print("[INFO] BLIP2 Capiton 생성")
-            image = Image.open(image_path).convert("RGB")
+            print("[INFO] 이미지 받아오는 중")
+
+            response = requests.get(url)
+            image = Image.open(BytesIO(response.content)).convert("RGB")
 
             print("[INFO] Processor 호출 시작")
             inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
