@@ -31,7 +31,7 @@ class TextToImage:
             variant = "fp16",
             use_safetensors = True,
             device_map="auto",
-            low_cpu_mem_usage=False
+            low_cpu_mem_usage=True
         )
         self.pipe.to("cuda")
 
