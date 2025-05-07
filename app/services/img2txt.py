@@ -12,7 +12,6 @@ class ImageToText:
         self.blip_model = os.getenv("BLIP_MODEL_PATH")
         self.client = openai.OpenAI(api_key="OPENAI_API_KEY")
         self.processor = Blip2Processor.from_pretrained(self.blip_model)
-        self.processor.tokenizer = PreTrainedTokenizerFast(tokenizer_file=f"{self.blip_model}/tokenizer.json")
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.blip_model,
             torch_dtype = torch.float16,
@@ -35,12 +34,16 @@ class ImageToText:
 
     def generate_text(self, url: str):
         # BLIP2 Caption 생성
+        print("[INFO] BLIP2 Capiton 생성")
         image = Image.open(url).convert("RGB")
 
+        print("[INFO] BLIP2 시작")
         inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
         generated_ids = self.model.generate(**inputs, max_new_tokens=50)
         caption = self.processor.tokenizer.decode(generated_ids[0], skip_special_tokens = True)
 
+        print(f"[INFO] Caption: {caption}")
+        
         # GPT-4o Prompts 생성
         response = self.client.chat.completions.create(
             model = "gpt-4o",
