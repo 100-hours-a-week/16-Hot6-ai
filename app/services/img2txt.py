@@ -46,7 +46,7 @@ class ImageToText:
 
             response = requests.get(url)
             image = Image.open(BytesIO(response.content)).convert("RGB")
-
+            
             print("[INFO] Processor 호출 시작")
             inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
             print("[INFO] 모델로부터 캡션 생성 중...")

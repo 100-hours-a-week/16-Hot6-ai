@@ -51,6 +51,8 @@ async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
     }
 
 def run_image_generate(image_url: str, tmp_filename: str):
+    # 디버깅용
+    print("[DEBUG] BLIP_MODEL_PATH =", os.getenv("BLIP_MODEL_PATH"))
     try:
         print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
         # 1. 이미지 → 텍스트
