@@ -15,9 +15,9 @@ class ImageToText:
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.blip_model,
             torch_dtype = torch.float16,
-            device_map="auto",
-            low_cpu_mem_usage=True
         )
+        
+        self.model = self.model.to("cuda")
         
     # Prompt 정리(불필요한 단어 제거)
     def clean_prompt(prompt: str) -> str:
