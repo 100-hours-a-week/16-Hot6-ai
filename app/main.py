@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import uuid
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = os.getenv("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import requests
 import json
 import torch
@@ -16,7 +18,7 @@ from services.naverapi import NaverAPI
 
 app = FastAPI()
 load_dotenv()
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = os.getenv("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 
 class ImageRequest(BaseModel):
     initial_image_url: str
