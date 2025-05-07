@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # === 기본 ===
     PROJECT_NAME: str = "Desk-AI"
     ENV: str = "local"
+    BLIP2_MODEL: str = "Salesforce/blip2-flan-t5-xl"
 
     # === 외부 API ===
     OPENAI_API_KEY: str

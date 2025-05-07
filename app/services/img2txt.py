@@ -17,6 +17,19 @@ class ImageToText:
             torch_dtype = torch.float16,
             device_map="auto"
         )
+        
+    # Prompt 정리(불필요한 단어 제거)
+    def clean_prompt(prompt: str) -> str:
+        prompt = prompt.replace("wired", "wireless")
+        prompt = prompt.replace("cables", "no visible cables")
+        prompt = prompt.replace("clutter", "clean and organized")
+        prompt = prompt.replace("noisy background", "neutral background")
+        # 쓰레기 제거
+        trash_keywords = ["trash", "mess", "noodles", "instant ramen", "wires", "tangled"]
+        for word in trash_keywords:
+            if word in prompt:
+                prompt = prompt.replace(word, "")
+        return prompt.strip()
 
     def generate_text(self, url: str):
         # BLIP2 Caption 생성
@@ -29,14 +42,30 @@ class ImageToText:
         # GPT-4o Prompts 생성
         response = self.client.chat.completions.create(
             model = "gpt-4o",
+            # messages = [
+            #     {"role" : "system", "content" : "You are a creative prompt engineer for image generation."},
+            #     {"role" : "user", "content" : f"Make this into a vivid prompt for image generation: {caption}"}
+            # ],
+            # temperature = 0.8,
             messages = [
-                {"role" : "system", "content" : "You are a creative prompt engineer for image generation."},
-                {"role" : "user", "content" : f"Make this into a vivid prompt for image generation: {caption}"}
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert prompt engineer for text-to-image models like Stable Diffusion XL. "
+                    "Your job is to take short captions and rewrite them into detailed, vivid, and highly descriptive prompts "
+                    "suitable for realistic image generation. Use natural, photographic descriptions and focus on visual details, "
+                    "lighting, atmosphere, and realistic object arrangements. Keep the total prompt under 70 tokens."
+                )
+            },
+            {
+                "role": "user",
+                "content": f"Caption: {caption}\nPlease rewrite this into a vivid image generation prompt."
+            }
             ],
-            temperature = 0.8,
+            temperature=0.6,
             max_tokens = 70
         )
         generated_prompt = response.choices[0].message.content
-
+        generated_prompt = self.clean_prompt(generated_prompt)
         # 여기서 추천 아이템은 어떤 식으로 뽑아올 지 좀 더 고민
         return generated_prompt
