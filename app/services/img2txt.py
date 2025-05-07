@@ -10,6 +10,8 @@ class ImageToText:
         # Model 위치도 dotenv로 관리
         load_dotenv()
         self.blip_model = os.getenv("BLIP_MODEL_PATH")
+        if not self.blip_model:
+            raise ValueError("BLIP_MODEL_PATH is not set in the environment or .env file.")
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.processor = Blip2Processor.from_pretrained(self.blip_model, use_fast=False)
         self.model = Blip2ForConditionalGeneration.from_pretrained(
