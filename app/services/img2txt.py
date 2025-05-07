@@ -37,6 +37,8 @@ class ImageToText:
         return prompt.strip()
 
     def generate_text(self, url: str):
+        if not url:
+            raise ValueError("[Error] url is None.")
         try:
             print(f"[DEBUG] 전달된 url: {url}")
             # BLIP2 Caption 생성
