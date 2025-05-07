@@ -17,7 +17,6 @@ class TextToImage:
         self.s3_bucket_name = os.getenv("S3_BUCKET_NAME")
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        self.lora_settings = {"ott_3d" : (["ott_lora", "d3_lora"], [0.8, 0.4])}
 
         self.s3_client = boto3.client(
             "s3",
@@ -48,17 +47,18 @@ class TextToImage:
             weight_name = os.path.basename(self.ott_lora),
             adapter_name = "ott_lora"
         )
-        self.pipe.load_lora_weights(
-            self.d3_lora,
-            weight_name = os.path.basename(self.d3_lora),
-            adapter_name = "d3_lora"
-        )
+        # self.pipe.load_lora_weights(
+        #     self.d3_lora,
+        #     weight_name = os.path.basename(self.d3_lora),
+        #     adapter_name = "d3_lora"
+        # )
 
-        adapter_names, adapter_weights = self.lora_settings["ott_3d"]
-        self.pipe.set_adapters(adapter_names, adapter_weights)
-        # self.pipe.fuse_lora()
+        # adapter_names, adapter_weights = self.lora_settings["ott_3d"]
+        # self.pipe.set_adapters(adapter_names, adapter_weights)
+        self.pipe.set_adapters(["ott_lora"], [1.0])
+        self.pipe.fuse_lora()
 
-        # print("txt2img generator initialized and lora fused.")
+        print("[INFO] txt2img generator initialized and lora fused.")
 
     def generate_image(self, prompt: str, negative_prompt: str = None) -> str:
         if negative_prompt is None:
