@@ -1,96 +1,86 @@
+from fastapi import FastAPI, BackgroundTasks
+from pydantic import BaseModel
+from typing import List, Dict, Any
+import uuid
 import os
 import requests
-# fastapi_project/app/main.py
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.response import JSONResponse
-from .core.config import get_settings
-from .routers import classify, healthcheck, info
-from .routers.generated import v1 as gen_v1
-from pydantic import BaseModel
+import json
 
-# 모듈 호출
 from services.desk_classify import Desk_classifier
-from services.txt2img import Txt2Img
-from services.vision2text import Img2Txt
+from services.img2txt import ImageToText
+from services.txt2img import TextToImage
+from services.naverapi import NaverAPI
 
-settings = get_settings()
 
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI()
 
-# # CORS (필요 시)
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# === Router 등록 ===
-app.include_router(classify.router, prefix="/classify", tags=["Classify"])
-app.include_router(healthcheck.router, prefix="/healthcheck", tags=["Health"])
-app.include_router(info.router, prefix="/info", tags=["Info"])
-app.include_router(gen_v1.router, prefix="/generated/v1", tags=["Generated-v1"])
-
-# Desk Classify
-
-## 임시로 다운로드 해야함.
-DOWNLOAD_DIR = "downloaded_images"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-class ClassifyRequest(BaseModel):
+class ImageRequest(BaseModel):
     initial_image_url: str
 
 @app.post("/classify")
-async def classify_image(req: ClassifyRequest):
+async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
     image_url = req.initial_image_url
-    file_name = os.path.join(DOWNLOAD_DIR, os.path.basename(image_url))
 
-    try:
-        response = requests.get(image_url, stream = True, timeout = 5)
-        response.raise_for_status()
+    # 1. 이미지 다운로드
+    tmp_filename = f"tmp_{uuid.uuid4()}.jpg"
+    with open(tmp_filename, "wb") as f:
+        f.write(requests.get(image_url).content)
 
-        with open(file_name, "wb") as f:
-            for chunk in response.iter_content(1024):
-                f.write(chunk)
+    # 2. 책상 여부 판단
+    classifier = Desk_classifier()
+    is_desk = classifier.predict(tmp_filename)
 
-        is_desk = Desk_classifier.predict(file_name)
+    if not is_desk:
+        os.remove(tmp_filename)
+        return {
+            "initial_image_url": image_url,
+            "is_desk": False
+        }
 
-    except Exception as e:
-        return JSONResponse(status_code=400, content={"error": str(e)})
-    
-    finally:
-        if os.path.exists(file_name):
-            os.remove(file_name)
-
-    return JSONResponse(content={
+    # True일 경우 먼저 응답 반환하고 나머지는 Background Task로 처리
+    background_tasks.add_task(run_image_generate, image_url, tmp_filename)
+    return {
         "initial_image_url": image_url,
-        "classify": is_desk
-    })
-###
+        "is_desk": True
+    }
 
-# Text to Image
-
-class PromptRequest(BaseModel):
-    prompt: str
-
-generator = Txt2Img(
-    base_model_path="",
-    vae_path="",
-    lora_paths=[
-        "",
-        ""
-    ],
-    adapter_names=["ott_lora", "3d_lora"],
-    adapter_weights=[0.8, 0.4],
-)
-
-@app.post("/generate")
-def generate_image(request: PromptRequest):
+def run_image_generate(image_url: str, tmp_filename: str):
     try:
-        url = generator.generate_img(request.prompt)
-        return {"image_url": url}
-    except Exception as e:
-        raise HTTPException(status_code = 500, detail = str(e))
+        # 1. 이미지 → 텍스트
+        img2txt = ImageToText(image_url)
+        prompt = img2txt.generate_text()
 
-###
+        # 2. 텍스트 → 이미지
+        txt2img = TextToImage()
+        generated_image_url = txt2img.generate_image(prompt)
+
+        # 3. 네이버 아이템 추천
+        # 임시 item_list
+        item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
+        naver = NaverAPI(item_list)
+        products = naver.run()
+
+        # 4. 백엔드로 전송
+        backend_url = os.getenv("RESULT_POST_URL")
+        payload = {
+            "initial_image_url": image_url,
+            "processed_image_url": generated_image_url,
+            "products": products
+        }
+
+        response = requests.post(
+            backend_url,
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"}
+        )
+
+        if response.status_code != 200:
+            print(f"[ERROR] Failed to notify backend: {response.status_code}")
+        else:
+            print("[INFO] Successfully sent result to backend")
+
+    except Exception as e:
+        print(f"[ERROR] Exception during pipeline: {e}")
+
+    finally:
+        os.remove(tmp_filename)

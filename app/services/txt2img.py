@@ -7,12 +7,17 @@ import boto3
 import os
 import uuid
 
-class Txt2Img:
-    def __init__(self, base_model_path: str, vae_path: str, lora_paths: list, adapter_names: list, adapter_weights: list):
+class TextToImage:
+    def __init__(self):
         load_dotenv()
+        self.base_model = os.getenv("BASE_MODEL_PATH")
+        self.vae = os.getenv("VAE_PATH")
+        self.ott_lora = os.getenv("OTT_LORA_PATH")
+        self.d3_lora = os.getenv("3D_LORA_PATH")
         self.s3_bucket_name = os.getenv("S3_BUCKET_NAME")
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        self.lora_settings = {"ott_3d" : (["ott_lora", "3d_lora"], [0.8, 0.4])}
 
         self.s3_client = boto3.client(
             "s3",
@@ -21,28 +26,37 @@ class Txt2Img:
         )
 
         self.pipe = StableDiffusionXLPipeline.from_single_file(
-            base_model_path,
+            self.base_model,
             torch_dtype = torch.float16,
             variant = "fp16",
             use_safetensors = True,
         )
         self.pipe.to("cuda")
 
-        if vae_path and os.path.exists(vae_path):
+        if self.vae and os.path.exists(self.vae):
             self.pipe.vae = AutoencoderKL.from_single_file(
-                vae_path,
+                self.vae,
                 torch_dtype = torch.float16
             ).to("cuda")
 
-        for path, name in zip(lora_paths, adapter_names):
-            self.pipe.load_lora_weights(path, weight_name = "defalut", adapter_names = name)
+        self.pipe.load_lora_weights(
+            self.ott_lora,
+            weight_name = os.path.basename(self.ott_lora),
+            adapter_name = "ott_lora"
+        )
+        self.pipe.load_lora_weights(
+            self.d3_lora,
+            weight_name = os.path.basename(self.d3_lora),
+            adapter_name = "d3_lora"
+        )
 
+        adapter_names, adapter_weights = self.lora_settings["ott_3d"]
         self.pipe.set_adapters(adapter_names, adapter_weights)
         self.pipe.fuse_lora()
 
-        print("txt2img generator initialized and lora fused.")
+        # print("txt2img generator initialized and lora fused.")
 
-    def generate_img(self, prompt: str, negative_prompt: str = None) -> str:
+    def generate_image(self, prompt: str, negative_prompt: str = None) -> str:
         if negative_prompt is None:
             # negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
             negative_prompt = (
