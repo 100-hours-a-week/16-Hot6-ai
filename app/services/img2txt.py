@@ -10,7 +10,7 @@ class ImageToText:
         # Model 위치도 dotenv로 관리
         load_dotenv()
         self.blip_model = os.getenv("BLIP_MODEL_PATH")
-        self.client = openai.OpenAI(api_key="OPENAI_API_KEY")
+        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.processor = Blip2Processor.from_pretrained(self.blip_model, use_fast=False)
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.blip_model,
@@ -32,10 +32,10 @@ class ImageToText:
                 prompt = prompt.replace(word, "")
         return prompt.strip()
 
-    def generate_text(self, url: str):
+    def generate_text(self, image_path: str):
         # BLIP2 Caption 생성
         print("[INFO] BLIP2 Capiton 생성")
-        image = Image.open(url).convert("RGB")
+        image = Image.open(image_path).convert("RGB")
 
         print("[INFO] BLIP2 시작")
         inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
