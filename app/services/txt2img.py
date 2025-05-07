@@ -56,7 +56,7 @@ class TextToImage:
 
         adapter_names, adapter_weights = self.lora_settings["ott_3d"]
         self.pipe.set_adapters(adapter_names, adapter_weights)
-        self.pipe.fuse_lora()
+        # self.pipe.fuse_lora()
 
         # print("txt2img generator initialized and lora fused.")
 
