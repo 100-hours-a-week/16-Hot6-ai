@@ -76,8 +76,8 @@ class TextToImage:
             negative_prompt = negative_prompt,
             num_inference_steps = 30,
             guidance_scale = 7.5,
-            width = 1024,
-            height = 1024
+            width = 768,
+            height = 768
         ).image[0]
 
         buffer = BytesIO()
