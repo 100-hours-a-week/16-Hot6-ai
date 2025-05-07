@@ -33,7 +33,9 @@ class TextToImage:
             device_map="auto",
             low_cpu_mem_usage=True
         )
-        self.pipe.to("cuda")
+        self.pipe.enable_model_cpu_offload()
+        self.pipe.enable_attention_slicing()
+        self.pipe.enable_vae_tiling()
 
         if self.vae and os.path.exists(self.vae):
             self.pipe.vae = AutoencoderKL.from_single_file(
