@@ -47,8 +47,8 @@ async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
 def run_image_generate(image_url: str, tmp_filename: str):
     try:
         # 1. 이미지 → 텍스트
-        img2txt = ImageToText(image_url)
-        prompt = img2txt.generate_text()
+        img2txt = ImageToText()
+        prompt = img2txt.generate_text(image_url)
 
         # 2. 텍스트 → 이미지
         txt2img = TextToImage()
