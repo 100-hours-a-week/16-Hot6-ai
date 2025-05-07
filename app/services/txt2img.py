@@ -81,10 +81,10 @@ class TextToImage:
             image = self.pipe(
                 prompt = prompt,
                 negative_prompt = negative_prompt,
-                num_inference_steps = 30,
+                num_inference_steps = 20,
                 guidance_scale = 7.5,
-                width = 768,
-                height = 768
+                width = 512,
+                height = 512
             ).image[0]
             print(f"[DEBUG] After image - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
 
