@@ -32,21 +32,23 @@ class TextToImage:
             device_map="auto",
             low_cpu_mem_usage=True
         )
+        print(f"[DEBUG] Before inference - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         self.pipe.enable_model_cpu_offload()
         self.pipe.enable_attention_slicing()
         self.pipe.enable_vae_tiling()
-
+        print(f"[DEBUG] Before inference - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         if self.vae and os.path.exists(self.vae):
             self.pipe.vae = AutoencoderKL.from_single_file(
                 self.vae,
                 torch_dtype = torch.float16
             ).to("cuda")
-
+        print(f"[DEBUG] Before inference - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         self.pipe.load_lora_weights(
             self.ott_lora,
             weight_name = os.path.basename(self.ott_lora),
             adapter_name = "ott_lora"
         )
+        print(f"[DEBUG] Before inference - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         # self.pipe.load_lora_weights(
         #     self.d3_lora,
         #     weight_name = os.path.basename(self.d3_lora),
