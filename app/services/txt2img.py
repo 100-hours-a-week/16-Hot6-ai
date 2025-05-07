@@ -76,7 +76,7 @@ class TextToImage:
                     "duplicate, artifacts, lens flare, dramatic lighting, unnatural lighting"
                     )
         
-        with torch.inference_mode(), torch.cuda.amp.autocast("cuda"):
+        with torch.inference_mode(), torch.amp.autocast(device_type="cuda"):
             print(f"[DEBUG] Before image - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
             image = self.pipe(
                 prompt = prompt,
