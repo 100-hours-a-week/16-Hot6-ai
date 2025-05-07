@@ -12,6 +12,7 @@ from pydantic import BaseModel
 # 모듈 호출
 from services.desk_classify import Desk_classifier
 from services.txt2img import Txt2Img
+from services.vision2text import Img2Txt
 
 settings = get_settings()
 

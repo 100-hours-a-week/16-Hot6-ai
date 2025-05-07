@@ -44,7 +44,14 @@ class Txt2Img:
 
     def generate_img(self, prompt: str, negative_prompt: str = None) -> str:
         if negative_prompt is None:
-            negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
+            # negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
+            negative_prompt = (
+                    "illustration, cartoon, anime, sketch, painting, 3d render, "
+                    "blurry, low resolution, low quality, overexposed, underexposed, "
+                    "text, watermark, distorted, unrealistic, abstract, surreal, disfigured, "
+                    "extra limbs, extra fingers, fused hands, deformed, mutated, glitched, "
+                    "duplicate, artifacts, lens flare, dramatic lighting, unnatural lighting"
+                    )
         
         image = self.pipe(
             prompt = prompt,

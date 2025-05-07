@@ -6,3 +6,5 @@ numpy
 requests
 boto3
 python-dotenv
+openai
+scipy
