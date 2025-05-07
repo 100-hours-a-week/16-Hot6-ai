@@ -11,7 +11,7 @@ class ImageToText:
         load_dotenv()
         self.blip_model = os.getenv("BLIP_MODEL_PATH")
         self.client = openai.OpenAI(api_key="OPENAI_API_KEY")
-        self.processor = Blip2Processor.from_pretrained(self.blip_model)
+        self.processor = Blip2Processor.from_pretrained(self.blip_model, use_fast=False)
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.blip_model,
             torch_dtype = torch.float16,
@@ -43,7 +43,7 @@ class ImageToText:
         caption = self.processor.tokenizer.decode(generated_ids[0], skip_special_tokens = True)
 
         print(f"[INFO] Caption: {caption}")
-        
+
         # GPT-4o Prompts 생성
         response = self.client.chat.completions.create(
             model = "gpt-4o",
