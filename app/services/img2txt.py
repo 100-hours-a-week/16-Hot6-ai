@@ -1,7 +1,7 @@
 import torch
 import os
 from PIL import Image
-from transformers import Blip2Processor, Blip2ForConditionalGeneration
+from transformers import PreTrainedTokenizerFast, Blip2Processor, Blip2ForConditionalGeneration
 import openai
 from dotenv import load_dotenv
 
@@ -12,13 +12,14 @@ class ImageToText:
         self.blip_model = os.getenv("BLIP_MODEL_PATH")
         self.client = openai.OpenAI(api_key="OPENAI_API_KEY")
         self.processor = Blip2Processor.from_pretrained(self.blip_model)
+        self.processor.tokenizer = PreTrainedTokenizerFast(tokenizer_file=f"{self.blip_model}/tokenizer.json")
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.blip_model,
             torch_dtype = torch.float16,
         )
         
         self.model = self.model.to("cuda")
-        
+
     # Prompt 정리(불필요한 단어 제거)
     def clean_prompt(prompt: str) -> str:
         prompt = prompt.replace("wired", "wireless")
