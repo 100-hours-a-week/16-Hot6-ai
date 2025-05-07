@@ -30,6 +30,7 @@ class TextToImage:
             torch_dtype = torch.float16,
             variant = "fp16",
             use_safetensors = True,
+            low_cpu_mem_usage=True
         )
         self.pipe.to("cuda")
 
