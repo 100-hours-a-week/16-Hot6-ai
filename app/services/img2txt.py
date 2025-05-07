@@ -22,7 +22,7 @@ class ImageToText:
         self.model = self.model.to("cuda")
 
     # Prompt 정리(불필요한 단어 제거)
-    def clean_prompt(prompt: str) -> str:
+    def clean_prompt(self, prompt: str) -> str:
         prompt = prompt.replace("wired", "wireless")
         prompt = prompt.replace("cables", "no visible cables")
         prompt = prompt.replace("clutter", "clean and organized")
