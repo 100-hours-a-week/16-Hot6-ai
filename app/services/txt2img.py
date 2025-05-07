@@ -17,7 +17,7 @@ class TextToImage:
         self.s3_bucket_name = os.getenv("S3_BUCKET_NAME")
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        self.lora_settings = {"ott_3d" : (["ott_lora", "3d_lora"], [0.8, 0.4])}
+        self.lora_settings = {"ott_3d" : (["ott_lora", "d3_lora"], [0.8, 0.4])}
 
         self.s3_client = boto3.client(
             "s3",
