@@ -6,6 +6,7 @@ import os
 import requests
 import json
 import torch
+from dotenv import load_dotenv
 
 from services.desk_classify import Desk_classifier
 from services.img2txt import ImageToText
@@ -14,6 +15,8 @@ from services.naverapi import NaverAPI
 
 
 app = FastAPI()
+load_dotenv()
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = os.getenv("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 class ImageRequest(BaseModel):
     initial_image_url: str
