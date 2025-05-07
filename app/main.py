@@ -50,7 +50,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
         print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
         # 1. 이미지 → 텍스트
         img2txt = ImageToText()
-        prompt = img2txt.generate_text(image_url)
+        prompt = img2txt.generate_text(tmp_filename)
         print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
 
         # VRAM 정리
