@@ -8,8 +8,10 @@ from queue import Queue
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
+from startup import initialize_cuda
 
 app = FastAPI()
+initialize_cuda()
 load_dotenv()
 
 # ===== Queue 기반 직렬 실행 설정 =====
