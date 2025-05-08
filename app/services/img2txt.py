@@ -1,5 +1,6 @@
 import torch
 import os, gc
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import requests
 from io import BytesIO
 from PIL import Image
