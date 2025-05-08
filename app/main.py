@@ -5,7 +5,7 @@ import uuid, requests, json, os, time
 import torch, gc
 from dotenv import load_dotenv
 from torch.profiler import profile, record_function, ProfilerActivity, tensorboard_trace_handler
-from services.desk_classify import Desk_classifier
+# from services.desk_classify import Desk_classifier
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
@@ -28,6 +28,9 @@ async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
         f.write(requests.get(image_url).content)
     
     # 2. 책상 여부 판단
+    # classifier = Desk_classifier()
+    # is_desk = classifier.predict(tmp_filename)
+    from services.desk_classify import Desk_classifier
     classifier = Desk_classifier()
     is_desk = classifier.predict(tmp_filename)
     
