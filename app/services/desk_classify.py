@@ -25,6 +25,5 @@ class Desk_classifier:
         del self.model
         del x
         del img
-        del prob
         gc.collect()
         return bool(prob >= self.threshold)
