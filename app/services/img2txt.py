@@ -13,7 +13,7 @@ class ImageToText:
         if not self.blip_model:
             raise ValueError("BLIP_MODEL_PATH is not set in the environment or .env file.")
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.processor = Blip2Processor.from_pretrained(self.blip_model)
+        self.processor = Blip2Processor.from_pretrained(self.blip_model,use_fast = True)
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.blip_model,
             torch_dtype = torch.float16,
