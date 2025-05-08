@@ -9,7 +9,8 @@ import requests
 import json
 import torch
 from dotenv import load_dotenv
-from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import profile, record_function, ProfilerActivity, tensorboard_trace_handler
+import time
 from services.desk_classify import Desk_classifier
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
@@ -62,9 +63,16 @@ async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
 def run_image_generate(image_url: str, tmp_filename: str):
     print("[DEBUG] BLIP_MODEL_PATH =", os.getenv("BLIP_MODEL_PATH"))
     try:
+        # === TensorBoard 이벤트 로그용 로그 디렉토리 생성 ===
+        timestamp = int(time.time())
+        logdir = f"logs/tb-{timestamp}"
+        os.makedirs(logdir, exist_ok=True)
+
         # === 전체 프로파일링 시작 ===
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            schedule=torch.profiler.schedule(wait=1, warmup=1, active=3),
+            on_trace_ready=tensorboard_trace_handler(logdir),
             record_shapes=True,
             profile_memory=True,
             with_stack=True
@@ -108,10 +116,6 @@ def run_image_generate(image_url: str, tmp_filename: str):
                     print(f"[ERROR] Failed to notify backend: {response.status_code}")
                 else:
                     print("[INFO] Successfully sent result to backend")
-
-        # === 프로파일링 결과 출력 ===
-        print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10))
-        prof.export_chrome_trace(f"logs/trace_{int(time.time())}.json")
 
     except Exception as e:
         print(f"[ERROR] Exception during pipeline: {e}")
