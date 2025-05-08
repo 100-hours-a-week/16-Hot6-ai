@@ -42,13 +42,20 @@ async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
             "initial_image_url": image_url,
             "is_desk": False
         }
+    
+    else:
+        run_image_generate(image_url, tmp_filename)
+        return {
+            "initial_image_url": image_url,
+            "is_desk": True
+        }
 
     # True일 경우 먼저 응답 반환하고 나머지는 Background Task로 처리
-    background_tasks.add_task(run_image_generate, image_url, tmp_filename)
-    return {
-        "initial_image_url": image_url,
-        "is_desk": True
-    }
+    # background_tasks.add_task(run_image_generate, image_url, tmp_filename)
+    # return {
+    #     "initial_image_url": image_url,
+    #     "is_desk": True
+    # }
 
 def run_image_generate(image_url: str, tmp_filename: str):
     # 디버깅용
