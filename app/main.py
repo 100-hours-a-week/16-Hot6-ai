@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import requests, json, os, threading
+import requests, json, os, threading, copy
 import torch, gc
 from dotenv import load_dotenv
 from queue import Queue
@@ -96,12 +96,18 @@ def run_image_generate(image_url: str, tmp_filename: str):
             data=json.dumps(payload),
             headers={"Content-Type": "application/json"}
         )
-        print(f"[INFO] Step 4 완료: backend에게 보낸 내용 {response.text}")
+        print(f"[INFO] Step 4 완료: HTTP response status code = {response.status_code}")
 
         if response.status_code != 200:
             print(f"[ERROR] Failed to notify backend: {response.status_code}")
         else:
-            print("[DEBUG] payload:", json.dumps(payload, indent=2, ensure_ascii=False))
+            short_payload = copy.deepcopy(payload)
+            if "products" in short_payload and len(short_payload["products"]) > 2:
+                original_count = len(short_payload["products"])
+                short_payload["products"] = short_payload["products"][:2]
+                short_payload["products"].append(f"... ({original_count - 2} more items)")
+
+            print("[DEBUG] payload:", json.dumps(short_payload, indent=2, ensure_ascii=False))
 
     except Exception as e:
         print(f"[ERROR] Exception during pipeline: {e}")
