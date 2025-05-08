@@ -1,3 +1,5 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # TensorFlow만 GPU 금지
 import numpy as np
 import os, gc
 import torch
@@ -26,5 +28,4 @@ class Desk_classifier:
         del img
         del prob
         gc.collect()
-        torch.cuda.empty_cache()
         return bool(prob >= self.threshold)
