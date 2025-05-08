@@ -23,6 +23,7 @@ def generate_image(prompt, image):
     return result
 
 
+# <<<<<<< woody
 # import torch
 # from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 # from PIL import Image
@@ -65,6 +66,27 @@ def generate_image(prompt, image):
 #             torch_dtype = torch.float16,
 #         ).to("cuda")
 #         print(f"[DEBUG] After vae - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+# =======
+#         self.pipe = StableDiffusionXLPipeline.from_single_file(
+#             self.base_model,
+#             torch_dtype = torch.float16,
+#             variant = "fp16",
+#             use_safetensors = True,
+#             device_map="auto",
+#             low_cpu_mem_usage=True
+#         )
+#         self.pipe.enable_model_cpu_offload()
+#         print(f"[DEBUG] After base Model pipe - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+        
+        
+#         self.pipe.vae = AutoencoderKL.from_single_file(
+#             self.vae,
+#             torch_dtype = torch.float16,
+#         )
+#         self.pipe.enable_vae_slicing()
+#         self.pipe.enable_vae_tiling()
+#         print(f"[DEBUG] After vae - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+# >>>>>>> dev
         
 #         self.pipe.load_lora_weights(
 #             self.ott_lora,
