@@ -1,3 +1,30 @@
+# <<<<<<< brix
+# import torch
+# import os, gc
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# import requests
+# from io import BytesIO
+# from PIL import Image
+# from transformers import PreTrainedTokenizerFast, Blip2Processor, Blip2ForConditionalGeneration
+# import openai
+# from dotenv import load_dotenv
+# =======
+# from transformers import Blip2Processor, Blip2ForConditionalGeneration
+# import torch, gc
+# >>>>>>> dev
+
+# def generate_caption(model_path, image):
+#     processor = Blip2Processor.from_pretrained(model_path)
+#     model = Blip2ForConditionalGeneration.from_pretrained(model_path, torch_dtype=torch.float16).to("cuda")
+#     inputs = processor(images=image, return_tensors="pt").to("cuda", torch.float16)
+#     out = model.generate(**inputs, max_new_tokens=50)
+#     caption = processor.tokenizer.decode(out[0], skip_special_tokens=True)
+#     model.to("cpu")
+#     del model, inputs
+#     gc.collect()
+#     torch.cuda.empty_cache()
+#     return caption
+
 import torch
 import os, gc
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -98,7 +125,7 @@ class ImageToText:
         except Exception as e:
             print(f"[Error] generate_text() 실패: {e}")
             return None
-# class ImageToText:
+# # class ImageToText:
 #     def __init__(self):
 #         self.prompt = "A modern, sleek computer monitor with a vibrant display sits on a wooden desk. Sunlight streams through a nearby window, casting soft shadows. The desk is clean and organized-free, with a minimalist lamp and a potted plant beside the monitor."
 

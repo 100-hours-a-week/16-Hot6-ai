@@ -1,24 +1,19 @@
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
-from typing import List, Dict, Any
-import uuid
-import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-
-import requests
-import json
-import torch
+import os, requests, uuid, json, torch, gc
+from PIL import Image
 from dotenv import load_dotenv
-
 from services.desk_classify import Desk_classifier
-from services.img2txt import ImageToText
-from services.txt2img import TextToImage
+from services.img2txt import generate_caption
+from services.txt2img import generate_image
 from services.naverapi import NaverAPI
+import openai
 
-
-app = FastAPI()
 load_dotenv()
-
+app = FastAPI()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+blip_model = os.getenv("BLIP_MODEL_PATH")
+sdxl_model = os.getenv("BASE_MODEL_PATH")
 
 class ImageRequest(BaseModel):
     initial_image_url: str
@@ -26,91 +21,54 @@ class ImageRequest(BaseModel):
 @app.post("/classify")
 async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
     image_url = req.initial_image_url
-
-    # 1. 이미지 다운로드
-    tmp_filename = "tmp.jpg"
+    tmp_filename = f"tmp_{uuid.uuid4().hex[:6]}.jpg"
     with open(tmp_filename, "wb") as f:
         f.write(requests.get(image_url).content)
 
-    # 2. 책상 여부 판단
-    classifier = Desk_classifier()
-    is_desk = classifier.predict(tmp_filename)
+    is_desk = Desk_classifier().predict(tmp_filename)
 
     if not is_desk:
         os.remove(tmp_filename)
-        return {
-            "initial_image_url": image_url,
-            "is_desk": False
-        }
-    
-    else:
-        run_image_generate(image_url, tmp_filename)
-        return {
-            "initial_image_url": image_url,
-            "is_desk": True
-        }
+        return {"initial_image_url": image_url, "is_desk": False}
 
-    # True일 경우 먼저 응답 반환하고 나머지는 Background Task로 처리
-    # background_tasks.add_task(run_image_generate, image_url, tmp_filename)
-    # return {
-    #     "initial_image_url": image_url,
-    #     "is_desk": True
-    # }
+    background_tasks.add_task(run_pipeline, image_url, tmp_filename)
+    return {"initial_image_url": image_url, "is_desk": True}
 
-def run_image_generate(image_url: str, tmp_filename: str):
-    # 디버깅용
-    print("[DEBUG] BLIP_MODEL_PATH =", os.getenv("BLIP_MODEL_PATH"))
+def run_pipeline(image_url: str, tmp_filename: str):
     try:
-        print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
-        # 1. 이미지 → 텍스트
-        img2txt = ImageToText()
-        
-        prompt = img2txt.generate_text(image_url)
-        print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
-
-        # VRAM 정리
-        del img2txt
-        torch.cuda.empty_cache()
-        print("[INFO] VRAM 정리 완료 (after ImageToText)")
-
-        # 2. 텍스트 → 이미지
-        print("[INFO] Step 2: 텍스트 → 이미지 생성 시작")
-        txt2img = TextToImage()
-        generated_image_url = txt2img.generate_image(prompt)
-        print(f"[INFO] Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
-
-        # 3. 네이버 아이템 추천
-        print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
-        # 임시 item_list
-        item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
-        naver = NaverAPI(item_list)
-        products = naver.run()
-        print(f"[INFO] Step 3 완료: 추천된 제품 개수 = {len(products)}")
-
-        # 4. 백엔드로 전송
-        print("[INFO] Step 4: 백엔드로 결과 전송 시도")
+        image = Image.open(tmp_filename).convert("RGB")
+        caption = generate_caption(blip_model, image)
+        prompt = refine_prompt(caption)
+        result_image = generate_image(sdxl_model, prompt)
+        result_path = f"/tmp/result_{uuid.uuid4().hex[:6]}.png"
+        result_image.save(result_path)
+        item_list = ["lamp", "keyboard", "mouse", "plant", "desk mat"]
+        products = NaverAPI(item_list).run()
         backend_url = os.getenv("RESULT_POST_URL")
-        payload = {
-            "initial_image_url": image_url,
-            "processed_image_url": generated_image_url,
-            "products": products
-        }
-
         response = requests.post(
             backend_url,
-            data=json.dumps(payload),
+            data=json.dumps({
+                "initial_image_url": image_url,
+                "processed_image_url": f"http://your.domain/{os.path.basename(result_path)}",
+                "products": products
+            }),
             headers={"Content-Type": "application/json"}
         )
-
-        if response.status_code != 200:
-            print(f"[ERROR] Failed to notify backend: {response.status_code}")
-        else:
-            print("[INFO] Successfully sent result to backend")
-
     except Exception as e:
-        print(f"[ERROR] Exception during pipeline: {e}")
-
+        print(f"[ERROR] 파이프라인 오류: {e}")
     finally:
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
-            print("[INFO] 임시 파일 삭제 완료")
+            print("[✓] 임시 파일 삭제 완료")
+
+def refine_prompt(caption: str) -> str:
+    response = openai.ChatCompletion.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a creative prompt engineer for realistic image generation."},
+            {"role": "user", "content": f"Caption: {caption}\nPlease rewrite this into a vivid prompt for image generation."}
+        ],
+        temperature=0.6,
+        max_tokens=70
+    )
+    return response.choices[0].message.content.strip()
