@@ -3,15 +3,17 @@ from pydantic import BaseModel
 import os, requests, uuid, json, torch, gc
 from PIL import Image
 from dotenv import load_dotenv
-from app.services.desk_classify import Desk_classifier
-from app.services.img2txt import generate_caption
-from app.services.txt2img import generate_image
-from app.services.naverapi import NaverAPI
+from services.desk_classify import Desk_classifier
+from services.img2txt import generate_caption
+from services.txt2img import generate_image
+from services.naverapi import NaverAPI
 import openai
 
 load_dotenv()
 app = FastAPI()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+blip_model = os.getenv("BLIP_MODEL_PATH")
+sdxl_model = os.getenv("BASE_MODEL_PATH")
 
 class ImageRequest(BaseModel):
     initial_image_url: str
@@ -35,9 +37,9 @@ async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
 def run_pipeline(image_url: str, tmp_filename: str):
     try:
         image = Image.open(tmp_filename).convert("RGB")
-        caption = generate_caption(image)
+        caption = generate_caption(blip_model, image)
         prompt = refine_prompt(caption)
-        result_image = generate_image(prompt, image)
+        result_image = generate_image(sdxl_model, prompt)
         result_path = f"/tmp/result_{uuid.uuid4().hex[:6]}.png"
         result_image.save(result_path)
         item_list = ["lamp", "keyboard", "mouse", "plant", "desk mat"]
