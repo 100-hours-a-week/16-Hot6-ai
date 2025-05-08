@@ -63,10 +63,6 @@ async def classify_image(req: ImageRequest, background_tasks: BackgroundTasks):
 def run_image_generate(image_url: str, tmp_filename: str):
     print("[DEBUG] BLIP_MODEL_PATH =", os.getenv("BLIP_MODEL_PATH"))
     try:
-        from services.img2txt import ImageToText
-        from services.txt2img import TextToImage
-        from services.naverapi import NaverAPI
-
         timestamp = int(time.time())
         logdir = f"logs/tb-{timestamp}"
         os.makedirs(logdir, exist_ok=True)
@@ -87,7 +83,6 @@ def run_image_generate(image_url: str, tmp_filename: str):
                 print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
                 del img2txt
                 torch.cuda.empty_cache()
-                print("[INFO] VRAM 정리 완료 (after ImageToText)")
             prof.step()
 
             with record_function("step_txt2img"):
@@ -97,31 +92,29 @@ def run_image_generate(image_url: str, tmp_filename: str):
                 print(f"[INFO] Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
             prof.step()
 
-            with record_function("step_naver_recommend"):
-                print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
-                item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
-                naver = NaverAPI(item_list)
+            with record_function("step_naver"):
+                print("[INFO] Step 3: 네이버 API 추천 시작")
+                naver = NaverAPI(["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"])
                 products = naver.run()
-                print(f"[INFO] Step 3 완료: 추천된 제품 개수 = {len(products)}")
+                print(f"[INFO] Step 3 완료: {len(products)}개 제품 추천 완료")
             prof.step()
 
-            with record_function("step_result_post"):
-                print("[INFO] Step 4: 백엔드로 결과 전송 시도")
-                backend_url = os.getenv("RESULT_POST_URL")
+            with record_function("step_backend_post"):
+                print("[INFO] Step 4: 백엔드로 결과 전송 시작")
                 payload = {
                     "initial_image_url": image_url,
                     "processed_image_url": generated_image_url,
                     "products": products
                 }
                 response = requests.post(
-                    backend_url,
+                    os.getenv("RESULT_POST_URL"),
                     data=json.dumps(payload),
                     headers={"Content-Type": "application/json"}
                 )
                 if response.status_code != 200:
-                    print(f"[ERROR] Failed to notify backend: {response.status_code}")
+                    print(f"[ERROR] 백엔드 전송 실패: {response.status_code}")
                 else:
-                    print("[INFO] Successfully sent result to backend")
+                    print("[INFO] 백엔드 전송 성공")
             prof.step()
 
     except Exception as e:
