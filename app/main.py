@@ -39,7 +39,7 @@ def run_pipeline(image_url: str, tmp_filename: str):
         image = Image.open(tmp_filename).convert("RGB")
         caption = generate_caption(blip_model, image)
         prompt = refine_prompt(caption)
-        result_image = generate_image(sdxl_model, prompt, image)
+        result_image = generate_image(sdxl_model, prompt)
         result_path = f"/tmp/result_{uuid.uuid4().hex[:6]}.png"
         result_image.save(result_path)
         item_list = ["lamp", "keyboard", "mouse", "plant", "desk mat"]
