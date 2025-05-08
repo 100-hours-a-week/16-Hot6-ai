@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import uuid
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = os.getenv("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import requests
 import json
