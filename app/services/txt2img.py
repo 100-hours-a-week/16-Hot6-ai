@@ -1,20 +1,24 @@
 from diffusers import StableDiffusionXLInpaintPipeline
 import torch, gc
 
-def generate_image(prompt, image):
+
+def generate_image(model_path, prompt):
+    
     pipe = StableDiffusionXLInpaintPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0",
+        model_path,
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True
     ).to("cuda")
+
     result = pipe(
         prompt=prompt,
-        image=image,
         negative_prompt="blurry, sketch, distorted, cartoon",
         guidance_scale=7.5,
         strength=0.5,
-        num_inference_steps=30
+        num_inference_steps=30,
+        width=1024,
+        height=1024
     ).images[0]
     pipe.to("cpu")
     del pipe

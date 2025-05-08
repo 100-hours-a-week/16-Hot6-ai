@@ -1,9 +1,9 @@
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
 import torch, gc
 
-def generate_caption(image):
-    processor = Blip2Processor.from_pretrained("path_to_blip2_processor")
-    model = Blip2ForConditionalGeneration.from_pretrained("path_to_blip2_model", torch_dtype=torch.float16).to("cuda")
+def generate_caption(model_path, image):
+    processor = Blip2Processor.from_pretrained(model_path)
+    model = Blip2ForConditionalGeneration.from_pretrained(model_path, torch_dtype=torch.float16).to("cuda")
     inputs = processor(images=image, return_tensors="pt").to("cuda", torch.float16)
     out = model.generate(**inputs, max_new_tokens=50)
     caption = processor.tokenizer.decode(out[0], skip_special_tokens=True)
