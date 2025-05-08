@@ -21,7 +21,7 @@ class ImageToText:
             torch_dtype = torch.float16,
         )
         
-        self.model = self.model.to("cuda")
+        self.model = self.model.to("cpu")
 
     # Prompt 정리(불필요한 단어 제거)
     def clean_prompt(self, prompt: str) -> str:
@@ -46,11 +46,12 @@ class ImageToText:
 
             response = requests.get(url)
             image = Image.open(BytesIO(response.content)).convert("RGB")
+            image = image.resize((512, 512))
             
             print("[INFO] Processor 호출 시작")
             inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
             print("[INFO] 모델로부터 캡션 생성 중...")
-            generated_ids = self.model.generate(**inputs, max_new_tokens=50)
+            generated_ids = self.model.generate(**inputs.to("cpu"), max_new_tokens=50)
             caption = self.processor.tokenizer.decode(generated_ids[0], skip_special_tokens = True)
 
             print(f"[INFO] Caption: {caption}")
