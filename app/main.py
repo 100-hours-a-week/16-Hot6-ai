@@ -1,7 +1,6 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import List, Dict, Any
-import uuid, requests, json, os, time, threading
+import requests, json, os, threading
 import torch, gc
 from dotenv import load_dotenv
 from queue import Queue
@@ -46,7 +45,6 @@ async def classify_image(req: ImageRequest):
     is_desk = classifier.predict(tmp_filename)
 
     if not is_desk:
-        print("[DEBUG] Desk 이미지가 아닙니다.")
         os.remove(tmp_filename)
         return {
             "initial_image_url": image_url,
@@ -55,6 +53,7 @@ async def classify_image(req: ImageRequest):
 
     # ✅ 작업 큐에 넣고 순차 처리
     task_queue.put((image_url, tmp_filename))
+    print("[DEBUG] Queue 처리, MVP이후 번호 넣을 수 있으면 넣어보기")
 
     return {
         "initial_image_url": image_url,
@@ -95,6 +94,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
             data=json.dumps(payload),
             headers={"Content-Type": "application/json"}
         )
+        print(f"[INFO] Step 4 완료: backend에게 보낸 내용 {response.text}")
 
         if response.status_code != 200:
             print(f"[ERROR] Failed to notify backend: {response.status_code}")
@@ -108,3 +108,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
             print("[INFO] 임시 파일 삭제 완료")
+
+        gc.collect()
+        torch.cuda.empty_cache()
+        print("[INFO] VRAM cache 삭제 완료")

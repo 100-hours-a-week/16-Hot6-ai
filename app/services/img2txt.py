@@ -1,34 +1,8 @@
-# <<<<<<< brix
-# import torch
-# import os, gc
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-# import requests
-# from io import BytesIO
-# from PIL import Image
-# from transformers import PreTrainedTokenizerFast, Blip2Processor, Blip2ForConditionalGeneration
-# import openai
-# from dotenv import load_dotenv
-# =======
-# from transformers import Blip2Processor, Blip2ForConditionalGeneration
-# import torch, gc
-# >>>>>>> dev
-
-# def generate_caption(model_path, image):
-#     processor = Blip2Processor.from_pretrained(model_path)
-#     model = Blip2ForConditionalGeneration.from_pretrained(model_path, torch_dtype=torch.float16).to("cuda")
-#     inputs = processor(images=image, return_tensors="pt").to("cuda", torch.float16)
-#     out = model.generate(**inputs, max_new_tokens=50)
-#     caption = processor.tokenizer.decode(out[0], skip_special_tokens=True)
-#     model.to("cpu")
-#     del model, inputs
-#     gc.collect()
-#     torch.cuda.empty_cache()
-#     return caption
 import os, gc, torch, requests, openai
 import requests
 from io import BytesIO
 from PIL import Image
-from transformers import PreTrainedTokenizerFast, Blip2Processor, Blip2ForConditionalGeneration
+from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from dotenv import load_dotenv
 
 class ImageToText:
@@ -65,9 +39,8 @@ class ImageToText:
             raise ValueError("[Error] url is None.")
         try:
             print(f"[DEBUG] 전달된 url: {url}")
-            # BLIP2 Caption 생성
-            print("[INFO] 이미지 받아오는 중")
 
+            print("[INFO] 이미지 받아오는 중")
             response = requests.get(url)
             image = Image.open(BytesIO(response.content)).convert("RGB")
             image = image.resize((512, 512))
@@ -83,11 +56,6 @@ class ImageToText:
             # GPT-4o Prompts 생성
             response = self.client.chat.completions.create(
                 model = "gpt-4o",
-                # messages = [
-                #     {"role" : "system", "content" : "You are a creative prompt engineer for image generation."},
-                #     {"role" : "user", "content" : f"Make this into a vivid prompt for image generation: {caption}"}
-                # ],
-                # temperature = 0.8,
                 messages = [
                 {
                     "role": "system",
@@ -125,13 +93,3 @@ class ImageToText:
         except Exception as e:
             print(f"[Error] generate_text() 실패: {e}")
             return None
-# # class ImageToText:
-#     def __init__(self):
-#         self.prompt = "A modern, sleek computer monitor with a vibrant display sits on a wooden desk. Sunlight streams through a nearby window, casting soft shadows. The desk is clean and organized-free, with a minimalist lamp and a potted plant beside the monitor."
-
-#     def generate_text(self, url:str):
-#         if url:
-#             print(f"[Succes] url 잘 받음")
-#         else:
-#             print(f"[Error] url is None")
-#         return self.prompt
