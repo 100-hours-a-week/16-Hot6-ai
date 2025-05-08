@@ -1,18 +1,10 @@
 import numpy as np
-import os
-# <<<<<<< brix
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+import os, gc
+import torch
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from dotenv import load_dotenv
-# =======
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # GPU 사용 방지
-# from dotenv import load_dotenv
-# from tensorflow.keras.models import load_model
-# from tensorflow.keras.preprocessing import image
-# from tensorflow.keras.applications.vgg16 import preprocess_input
-# >>>>>>> dev
 
 class Desk_classifier:
     def __init__(self, threshold = 0.5):
@@ -29,4 +21,10 @@ class Desk_classifier:
         x = preprocess_input(x)
 
         prob = self.model.predict(x)[0][0]
+        del self.model
+        del x
+        del img
+        del prob
+        gc.collect()
+        torch.cuda.empty_cache()
         return bool(prob >= self.threshold)

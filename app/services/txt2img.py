@@ -1,15 +1,14 @@
-import torch
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from PIL import Image
 from io import BytesIO
 from dotenv import load_dotenv
-import boto3
-import os
-import uuid
+import boto3, gc, os, uuid, torch
 
 class TextToImage:
     def __init__(self):
+        # Model 위치도 dotenv로 관리
         load_dotenv()
+        
         self.base_model = os.getenv("BASE_MODEL_PATH")
         self.vae = os.getenv("VAE_PATH")
         self.ott_lora = os.getenv("OTT_LORA_PATH")
@@ -89,5 +88,11 @@ class TextToImage:
             s3_key,
             ExtraArgs={"ContentType": "image/png"}
         )
+        del self.pipe
+        del image
+        gc.collect()
+        torch.cuda.empty_cache()
+        print(f"[DEBUG] After upload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+        
 
         return f"https://{self.s3_bucket_name}.s3.amazonaws.com/{s3_key}"

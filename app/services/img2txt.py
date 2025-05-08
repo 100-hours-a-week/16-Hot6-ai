@@ -24,15 +24,11 @@
 #     gc.collect()
 #     torch.cuda.empty_cache()
 #     return caption
-
-import torch
-import os, gc
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+import os, gc, torch, requests, openai
 import requests
 from io import BytesIO
 from PIL import Image
 from transformers import PreTrainedTokenizerFast, Blip2Processor, Blip2ForConditionalGeneration
-import openai
 from dotenv import load_dotenv
 
 class ImageToText:
@@ -49,7 +45,7 @@ class ImageToText:
             torch_dtype = torch.float16,
         )
         
-        self.model = self.model.to("cpu")
+        self.model = self.model.to("cuda", torch.float16)
 
     # Prompt 정리(불필요한 단어 제거)
     def clean_prompt(self, prompt: str) -> str:
@@ -79,7 +75,7 @@ class ImageToText:
             print("[INFO] Processor 호출 시작")
             inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
             print("[INFO] 모델로부터 캡션 생성 중...")
-            generated_ids = self.model.generate(**inputs.to("cpu"), max_new_tokens=50)
+            generated_ids = self.model.generate(**inputs.to("cuda"), max_new_tokens=50)
             caption = self.processor.tokenizer.decode(generated_ids[0], skip_special_tokens = True)
 
             print(f"[INFO] Caption: {caption}")
@@ -115,8 +111,12 @@ class ImageToText:
             del self.model
             del self.processor
             del inputs
+            del generated_ids
+            del caption
             gc.collect()
             torch.cuda.empty_cache()
+            print(f"[DEBUG] After upload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+            print("[INFO] Prompt 생성 완료")
             generated_prompt = response.choices[0].message.content
             generated_prompt = self.clean_prompt(generated_prompt)
             # 여기서 추천 아이템은 어떤 식으로 뽑아올 지 좀 더 고민
