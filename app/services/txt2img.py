@@ -31,19 +31,14 @@ class TextToImage:
             use_safetensors = True,
             device_map="auto",
             low_cpu_mem_usage=True
-        )
+        ).to("cuda")
         print(f"[DEBUG] After base Model pipe - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         
-        self.pipe.enable_model_cpu_offload()
-        self.pipe.enable_attention_slicing()
-        self.pipe.enable_vae_tiling()
-        print(f"[DEBUG] After cpu_offload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         
-        if self.vae and os.path.exists(self.vae):
-            self.pipe.vae = AutoencoderKL.from_single_file(
-                self.vae,
-                torch_dtype = torch.float16
-            ).to("cuda")
+        self.pipe.vae = AutoencoderKL.from_single_file(
+            self.vae,
+            torch_dtype = torch.float16,
+        ).to("cuda")
         print(f"[DEBUG] After vae - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         
         self.pipe.load_lora_weights(
@@ -51,17 +46,14 @@ class TextToImage:
             weight_name = os.path.basename(self.ott_lora),
             adapter_name = "ott_lora"
         )
+        self.pipe.load_lora_weights(
+            self.d3_lora,
+            weight_name = os.path.basename(self.d3_lora),
+            adapter_name = "d3_lora"
+        )
         print(f"[DEBUG] After Lora - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
-        # self.pipe.load_lora_weights(
-        #     self.d3_lora,
-        #     weight_name = os.path.basename(self.d3_lora),
-        #     adapter_name = "d3_lora"
-        # )
-
-        # adapter_names, adapter_weights = self.lora_settings["ott_3d"]
-        # self.pipe.set_adapters(adapter_names, adapter_weights)
-        self.pipe.set_adapters(["ott_lora"], [1.0])
-        # self.pipe.fuse_lora()
+        self.pipe.set_adapters(["ott_lora", "d3_lora"], [0.7, 0.5])
+        self.pipe.fuse_lora()
 
         print("[INFO] txt2img generator initialized and lora fused.")
 
@@ -72,22 +64,17 @@ class TextToImage:
                     "illustration, cartoon, anime, sketch, painting, 3d render, "
                     "blurry, low resolution, low quality, overexposed, underexposed, "
                     "text, watermark, distorted, unrealistic, abstract, surreal, disfigured, "
-                    "extra limbs, extra fingers, fused hands, deformed, mutated, glitched, "
                     "duplicate, artifacts, lens flare, dramatic lighting, unnatural lighting"
                     )
         
-        with torch.inference_mode(), torch.amp.autocast(device_type="cuda"):
-            print(f"[DEBUG] Before image - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
-            image = self.pipe(
-                prompt = prompt,
-                negative_prompt = negative_prompt,
-                num_inference_steps = 20,
-                guidance_scale = 7.5,
-                width = 512,
-                height = 512
-            ).image[0]
-            print(f"[DEBUG] After image - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
-
+        image = self.pipe(
+            prompt = prompt,
+            negative_prompt = negative_prompt,
+            num_inference_steps=30,
+            guidance_scale=7.5,
+            width=1024,
+            height=1024,
+        ).images[0]
 
         buffer = BytesIO()
         image.save(buffer, format = "PNG")
