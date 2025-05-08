@@ -58,7 +58,6 @@ class TextToImage:
 
     def generate_image(self, prompt: str, negative_prompt: str = None) -> str:
         if negative_prompt is None:
-            # negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
             negative_prompt = (
                     "illustration, cartoon, anime, sketch, painting, 3d render, "
                     "blurry, low resolution, low quality, overexposed, underexposed, "
@@ -80,7 +79,7 @@ class TextToImage:
         buffer.seek(0)
 
         unique_id = str(uuid.uuid4())
-        s3_key = f"onthe-top/assets/images/{unique_id}.png"
+        s3_key = f"assets/images/{unique_id}.png"
 
         self.s3_client.upload_fileobj(
             buffer,

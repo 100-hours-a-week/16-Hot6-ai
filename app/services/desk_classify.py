@@ -1,7 +1,6 @@
 import os
 import contextlib
 import numpy as np
-import os, gc
 
 @contextlib.contextmanager
 def no_cuda_visible():
@@ -22,7 +21,6 @@ from dotenv import load_dotenv
 class Desk_classifier:
     def __init__(self, threshold = 0.5):
         load_dotenv()
-        #threshold, model_path 추후 수정
         model_path = os.getenv("CNN_MODEL")
         self.threshold = threshold
         with no_cuda_visible():
@@ -36,4 +34,6 @@ class Desk_classifier:
         x = preprocess_input(x)
 
         prob = self.model.predict(x)[0][0]
-        return bool(prob >= self.threshold)
+        classify = bool(prob >= self.threshold)
+        print(f"[DEBUG] Desk Classify = {classify}")
+        return classify
