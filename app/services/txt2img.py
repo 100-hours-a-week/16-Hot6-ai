@@ -31,14 +31,17 @@ class TextToImage:
             use_safetensors = True,
             device_map="auto",
             low_cpu_mem_usage=True
-        ).to("cuda")
+        )
+        self.pipe.enable_model_cpu_offload()
         print(f"[DEBUG] After base Model pipe - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         
         
         self.pipe.vae = AutoencoderKL.from_single_file(
             self.vae,
             torch_dtype = torch.float16,
-        ).to("cuda")
+        )
+        self.pipe.enable_vae_slicing()
+        self.pipe.enable_vae_tiling()
         print(f"[DEBUG] After vae - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         
         self.pipe.load_lora_weights(
