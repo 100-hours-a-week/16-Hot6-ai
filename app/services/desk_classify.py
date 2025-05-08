@@ -1,10 +1,18 @@
 import numpy as np
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # GPU 사용 방지
-from dotenv import load_dotenv
+# <<<<<<< brix
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg16 import preprocess_input
+from dotenv import load_dotenv
+# =======
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # GPU 사용 방지
+# from dotenv import load_dotenv
+# from tensorflow.keras.models import load_model
+# from tensorflow.keras.preprocessing import image
+# from tensorflow.keras.applications.vgg16 import preprocess_input
+# >>>>>>> dev
 
 class Desk_classifier:
     def __init__(self, threshold = 0.5):
