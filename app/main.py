@@ -111,6 +111,18 @@ def run_image_generate(image_url: str, tmp_filename: str):
     except Exception as e:
         print(f"[ERROR] Exception during pipeline: {e}")
 
+        payload = {
+            "initial_image_url": image_url,
+            "processed_image_url": None,
+            "products": None,
+        }
+        response = requests.post(
+            backend_url,
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"}
+        )
+        print(f"[INFO] 이미지 전송 실패, Null 전송 = {response.status_code}")
+
     finally:
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
