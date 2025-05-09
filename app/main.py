@@ -60,7 +60,6 @@ async def classify_image(req: ImageRequest):
     return {
         "initial_image_url": image_url,
         "classify": "true",
-        "queued": True
     }
 
 # ===== 이미지 생성 파이프라인 =====

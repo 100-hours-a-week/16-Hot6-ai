@@ -1,19 +1,5 @@
 import os
-import contextlib
 import numpy as np
-
-@contextlib.contextmanager
-def no_cuda_visible():
-    original_value = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-    try:
-        yield
-    finally:
-        if original_value is not None:
-            os.environ["CUDA_VISIBLE_DEVICES"] = original_value
-        else:
-            del os.environ["CUDA_VISIBLE_DEVICES"]
-
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from dotenv import load_dotenv
