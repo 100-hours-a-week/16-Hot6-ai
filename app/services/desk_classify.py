@@ -3,15 +3,14 @@ import numpy as np
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from dotenv import load_dotenv
+from tensorflow.keras.models import load_model
 
 class Desk_classifier:
     def __init__(self, threshold = 0.5):
         load_dotenv()
         model_path = os.getenv("CNN_MODEL")
         self.threshold = threshold
-        with no_cuda_visible():
-            from tensorflow.keras.models import load_model
-            self.model = load_model(model_path)
+        self.model = load_model(model_path)
 
     def predict(self, img_path: str) -> bool:
         img = image.load_img(img_path, target_size = (224, 224))
