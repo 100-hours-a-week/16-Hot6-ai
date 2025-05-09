@@ -1,15 +1,18 @@
-import torch
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from PIL import Image
 from io import BytesIO
 from dotenv import load_dotenv
-import boto3
-import os
-import uuid
+import boto3, gc, os, uuid, torch
 
-class Txt2Img:
-    def __init__(self, base_model_path: str, vae_path: str, lora_paths: list, adapter_names: list, adapter_weights: list):
+class TextToImage:
+    def __init__(self):
+        # Model 위치도 dotenv로 관리
         load_dotenv()
+        
+        self.base_model = os.getenv("BASE_MODEL_PATH")
+        self.vae = os.getenv("VAE_PATH")
+        self.ott_lora = os.getenv("OTT_LORA_PATH")
+        self.d3_lora = os.getenv("3D_LORA_PATH")
         self.s3_bucket_name = os.getenv("S3_BUCKET_NAME")
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -21,46 +24,62 @@ class Txt2Img:
         )
 
         self.pipe = StableDiffusionXLPipeline.from_single_file(
-            base_model_path,
+            self.base_model,
             torch_dtype = torch.float16,
             variant = "fp16",
             use_safetensors = True,
+            device_map="auto",
+            low_cpu_mem_usage=True
+        ).to("cuda")
+        print(f"[DEBUG] After base Model pipe - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+        
+        
+        self.pipe.vae = AutoencoderKL.from_single_file(
+            self.vae,
+            torch_dtype = torch.float16,
+        ).to("cuda")
+        print(f"[DEBUG] After vae - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+        
+        self.pipe.load_lora_weights(
+            self.ott_lora,
+            weight_name = os.path.basename(self.ott_lora),
+            adapter_name = "ott_lora"
         )
-        self.pipe.to("cuda")
-
-        if vae_path and os.path.exists(vae_path):
-            self.pipe.vae = AutoencoderKL.from_single_file(
-                vae_path,
-                torch_dtype = torch.float16
-            ).to("cuda")
-
-        for path, name in zip(lora_paths, adapter_names):
-            self.pipe.load_lora_weights(path, weight_name = "defalut", adapter_names = name)
-
-        self.pipe.set_adapters(adapter_names, adapter_weights)
+        self.pipe.load_lora_weights(
+            self.d3_lora,
+            weight_name = os.path.basename(self.d3_lora),
+            adapter_name = "d3_lora"
+        )
+        print(f"[DEBUG] After Lora - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+        self.pipe.set_adapters(["ott_lora", "d3_lora"], [0.7, 0.5])
         self.pipe.fuse_lora()
 
-        print("txt2img generator initialized and lora fused.")
+        print("[INFO] txt2img generator initialized and lora fused.")
 
-    def generate_img(self, prompt: str, negative_prompt: str = None) -> str:
+    def generate_image(self, prompt: str, negative_prompt: str = None) -> str:
         if negative_prompt is None:
-            negative_prompt = "blurry, low quality, noisy, distorted, deformed, bad proportions, text, watermark, messy, cluttered background, cartoon, anime, painting, sketch"
+            negative_prompt = (
+                    "illustration, cartoon, anime, sketch, painting, 3d render, "
+                    "blurry, low resolution, low quality, overexposed, underexposed, "
+                    "text, watermark, distorted, unrealistic, abstract, surreal, disfigured, "
+                    "duplicate, artifacts, lens flare, dramatic lighting, unnatural lighting"
+                    )
         
         image = self.pipe(
             prompt = prompt,
             negative_prompt = negative_prompt,
-            num_inference_steps = 30,
-            guidance_scale = 7.5,
-            width = 1024,
-            height = 1024
-        ).image[0]
+            num_inference_steps=30,
+            guidance_scale=7.5,
+            width=1024,
+            height=1024,
+        ).images[0]
 
         buffer = BytesIO()
         image.save(buffer, format = "PNG")
         buffer.seek(0)
 
         unique_id = str(uuid.uuid4())
-        s3_key = f"onthe-top/assets/images/{unique_id}.png"
+        s3_key = f"assets/images/{unique_id}.png"
 
         self.s3_client.upload_fileobj(
             buffer,
@@ -68,5 +87,11 @@ class Txt2Img:
             s3_key,
             ExtraArgs={"ContentType": "image/png"}
         )
+        del self.pipe
+        del image
+        gc.collect()
+        torch.cuda.empty_cache()
+        print(f"[DEBUG] After upload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+        
 
         return f"https://{self.s3_bucket_name}.s3.amazonaws.com/{s3_key}"

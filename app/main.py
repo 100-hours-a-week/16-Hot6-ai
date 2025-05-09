@@ -1,95 +1,121 @@
-import os
-import requests
-# fastapi_project/app/main.py
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.response import JSONResponse
-from .core.config import get_settings
-from .routers import classify, healthcheck, info
-from .routers.generated import v1 as gen_v1
+from fastapi import FastAPI
 from pydantic import BaseModel
+import requests, json, os, threading, copy
+import torch, gc
+from dotenv import load_dotenv
+from queue import Queue
 
-# 모듈 호출
-from services.desk_classify import Desk_classifier
-from services.txt2img import Txt2Img
+from services.img2txt import ImageToText
+from services.txt2img import TextToImage
+from services.naverapi import NaverAPI
+# from startup import initialize_cuda
 
-settings = get_settings()
+app = FastAPI()
+# initialize_cuda()
+load_dotenv()
 
-app = FastAPI(title=settings.PROJECT_NAME)
+# ===== Queue 기반 직렬 실행 설정 =====
+task_queue = Queue()
 
-# # CORS (필요 시)
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
+def image_worker():
+    while True:
+        image_url, tmp_filename = task_queue.get()
+        try:
+            run_image_generate(image_url, tmp_filename)
+        except Exception as e:
+            print(f"[ERROR] Image task failed: {e}")
+        finally:
+            task_queue.task_done()
 
-# === Router 등록 ===
-app.include_router(classify.router, prefix="/classify", tags=["Classify"])
-app.include_router(healthcheck.router, prefix="/healthcheck", tags=["Health"])
-app.include_router(info.router, prefix="/info", tags=["Info"])
-app.include_router(gen_v1.router, prefix="/generated/v1", tags=["Generated-v1"])
+# 서버 시작 시 백그라운드 쓰레드 실행
+threading.Thread(target=image_worker, daemon=True).start()
 
-# Desk Classify
-
-## 임시로 다운로드 해야함.
-DOWNLOAD_DIR = "downloaded_images"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-class ClassifyRequest(BaseModel):
+# ===== FastAPI 요청 모델 =====
+class ImageRequest(BaseModel):
     initial_image_url: str
 
 @app.post("/classify")
-async def classify_image(req: ClassifyRequest):
+async def classify_image(req: ImageRequest):
     image_url = req.initial_image_url
-    file_name = os.path.join(DOWNLOAD_DIR, os.path.basename(image_url))
+    tmp_filename = "tmp.jpg"
 
-    try:
-        response = requests.get(image_url, stream = True, timeout = 5)
-        response.raise_for_status()
+    with open(tmp_filename, "wb") as f:
+        f.write(requests.get(image_url).content)
 
-        with open(file_name, "wb") as f:
-            for chunk in response.iter_content(1024):
-                f.write(chunk)
+    from services.desk_classify import Desk_classifier
+    classifier = Desk_classifier()
+    is_desk = classifier.predict(tmp_filename)
 
-        is_desk = Desk_classifier.predict(file_name)
+    if not is_desk:
+        os.remove(tmp_filename)
+        return {
+            "initial_image_url": image_url,
+            "classify": "false"
+        }
 
-    except Exception as e:
-        return JSONResponse(status_code=400, content={"error": str(e)})
-    
-    finally:
-        if os.path.exists(file_name):
-            os.remove(file_name)
+    # ✅ 작업 큐에 넣고 순차 처리
+    task_queue.put((image_url, tmp_filename))
+    print("[DEBUG] Queue 처리, MVP이후 번호 넣을 수 있으면 넣어보기")
 
-    return JSONResponse(content={
+    return {
         "initial_image_url": image_url,
-        "classify": is_desk
-    })
-###
+        "classify": "true",
+    }
 
-# Text to Image
-
-class PromptRequest(BaseModel):
-    prompt: str
-
-generator = Txt2Img(
-    base_model_path="",
-    vae_path="",
-    lora_paths=[
-        "",
-        ""
-    ],
-    adapter_names=["ott_lora", "3d_lora"],
-    adapter_weights=[0.8, 0.4],
-)
-
-@app.post("/generate")
-def generate_image(request: PromptRequest):
+# ===== 이미지 생성 파이프라인 =====
+def run_image_generate(image_url: str, tmp_filename: str):
     try:
-        url = generator.generate_img(request.prompt)
-        return {"image_url": url}
-    except Exception as e:
-        raise HTTPException(status_code = 500, detail = str(e))
+        print("[DEBUG] 전달된 URL:", image_url)
+        print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
+        img2txt = ImageToText()
+        prompt = img2txt.generate_text(image_url)
+        print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
 
-###
+        print("[INFO] Step 2: 텍스트 → 이미지 생성 시작")
+        txt2img = TextToImage()
+        generated_image_url = txt2img.generate_image(prompt)
+        print(f"[INFO] Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
+
+        print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
+        item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
+        naver = NaverAPI(item_list)
+        products = naver.run()
+        print(f"[INFO] Step 3 완료: 추천된 제품 개수 = {len(products)}")
+
+        print("[INFO] Step 4: 백엔드로 결과 전송 시도")
+        backend_url = os.getenv("RESULT_POST_URL")
+        payload = {
+            "initial_image_url": image_url,
+            "processed_image_url": generated_image_url,
+            "products": products
+        }
+
+        response = requests.post(
+            backend_url,
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"}
+        )
+        print(f"[INFO] Step 4 완료: HTTP response status code = {response.status_code}")
+
+        if response.status_code != 200:
+            print(f"[ERROR] Failed to notify backend: {response.status_code}")
+        else:
+            short_payload = copy.deepcopy(payload)
+            if "products" in short_payload and len(short_payload["products"]) > 2:
+                original_count = len(short_payload["products"])
+                short_payload["products"] = short_payload["products"][:2]
+                short_payload["products"].append(f"... ({original_count - 2} more items)")
+
+            print("[DEBUG] payload:", json.dumps(short_payload, indent=2, ensure_ascii=False))
+
+    except Exception as e:
+        print(f"[ERROR] Exception during pipeline: {e}")
+
+    finally:
+        if os.path.exists(tmp_filename):
+            os.remove(tmp_filename)
+            print("[INFO] 임시 파일 삭제 완료")
+
+        gc.collect()
+        torch.cuda.empty_cache()
+        print("[INFO] VRAM cache 삭제 완료")
