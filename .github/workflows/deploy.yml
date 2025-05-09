@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p artifact
           cp -r app artifact/
-          cp -r alembic artifact/
+          cp -r scripts artifact/
           cp requirements.txt artifact/
 
       - name: Upload FastAPI artifact
@@ -80,20 +80,14 @@ jobs:
               UserKnownHostsFile /dev/null
           EOF
 
-      - name: Copy FastAPI files to dev server
+      - name: Copy FastAPI files to ~/ai-server
         run: |
           ssh -F ~/.ssh/config ai-dev-server 'rm -rf ~/ai-server && mkdir -p ~/ai-server'
-          scp -r -F ~/.ssh/config fastapi/* ai-dev-server:/home/ubuntu/ai-server/
+          scp -r -F ~/.ssh/config fastapi/* ai-dev-server:~/ai-server/
 
-      - name: Restart AI server via jump server
+      - name: Restart AI server via systemd
         run: |
           ssh -F ~/.ssh/config ai-dev-server <<'EOF'
-            set -eux
-            cd ~/ai-server
-            pkill -f "uvicorn" || true
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
-            nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > ai.log 2>&1 &
+            sudo systemctl daemon-reexec
+            sudo systemctl restart ai.service
           EOF
