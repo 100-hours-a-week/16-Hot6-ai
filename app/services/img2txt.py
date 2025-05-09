@@ -16,9 +16,7 @@ class ImageToText:
         self.processor = Blip2Processor.from_pretrained(self.blip_model,use_fast = True)
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.blip_model,
-            device_map="auto",
             torch_dtype = torch.float16,
-            low_cpu_mem_usage=True
         )
         
         self.model = self.model.to("cuda", torch.float16)
