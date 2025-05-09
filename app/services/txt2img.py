@@ -94,4 +94,4 @@ class TextToImage:
         print(f"[DEBUG] After upload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         
 
-        return f"https://{self.s3_bucket_name}.s3.amazonaws.com/{s3_key}"
+        return f"https://img.onthe-top.com/{unique_id}.png"
