@@ -68,16 +68,16 @@ def run_image_generate(image_url: str, tmp_filename: str):
         print("[DEBUG] 전달된 URL:", image_url)
         print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
         img2txt = ImageToText()
-        prompt = img2txt.generate_text(image_url)
+        prompt, item_list  = img2txt.generate_text(image_url)
         print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
-
+        print(f"[INFO] Step 1 완료: 생성된 상품 리스트 = {item_list}")
         print("[INFO] Step 2: 텍스트 → 이미지 생성 시작")
         txt2img = TextToImage()
         generated_image_url = txt2img.generate_image(prompt)
         print(f"[INFO] Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
 
         print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
-        item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
+        # item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
         naver = NaverAPI(item_list)
         products = naver.run()
         print(f"[INFO] Step 3 완료: 추천된 제품 개수 = {len(products)}")
