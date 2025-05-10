@@ -103,43 +103,51 @@ class ImageToText:
 
             # GPT-4o Prompts 생성
             response = self.client.chat.completions.create(
-                model = "gpt-4o",
-                messages = [
+            model = "gpt-4o",
+            messages = [
                 {
                     "role": "system",
                     "content": (
-                    "You are an expert prompt engineer and interior stylist for text-to-image models like Stable Diffusion XL.\n"
-                    "Your job is to take a simple image caption describing a basic desk layout, and do the following:\n\n"
-                    "1. Rewrite the caption into a vivid, photorealistic prompt that imagines a beautifully styled and enhanced version of the **same** desk setup.\n"
-                    "   ✨ You MUST preserve the original objects described in the caption (e.g., a laptop and monitor) and build on top of them with lighting, layout, and atmosphere enhancements.\n"
-                    "   The rewritten prompt MUST be under 70 tokens.\n\n"
-                    "2. Then, separately, suggest **exactly 5** practical and stylish desk accessories that match the upgraded prompt.\n"
-                    "   Each item should be listed on its own line, using markdown-style bullet list format (start with `-`).\n"
-                    "   If you're unsure, you must still generate 5 plausible, realistic items.\n\n"
-                    "**Output Format (strict):**\n"
-                    "Prompt:\n<your styled prompt here (under 70 tokens)>\n\n"
-                    "Recommended Items:\n"
-                    "- item 1\n"
-                    "- item 2\n"
-                    "- item 3\n"
-                    "- item 4\n"
-                    "- item 5\n\n"
-                    "**Rules:**\n"
-                    "1. Do NOT remove or replace original caption objects (e.g., don't remove the laptop/monitor if they were mentioned).\n"
-                    "2. Do NOT change the scene type (e.g., do NOT move it to a coffee shop or bedroom).\n"
-                    "3. Only improve the style and detail of the existing scene.\n"
-                    "4. The generated scene should be captured from a clean, centered, front-facing camera angle — as if looking directly at the desk from eye level. Avoid tilted or top-down views.\n"
-                    "5. You MUST generate 5 items. Never generate fewer than 5 items.\n"
-                    "6. If necessary, you may include objects from the original caption (e.g., laptop or monitor) as part of the 5 items, but you must still generate exactly 5 items.\n"
+                        "You are an expert prompt engineer and interior stylist for text-to-image models like Stable Diffusion XL.\n"
+                        "Your job is to take a simple image caption describing a basic desk layout, and do the following:\n\n"
+                        "1. Rewrite the caption into a vivid, photorealistic prompt that imagines a beautifully styled and enhanced version of the same desk setup.\n"
+                        "   ✨ You MUST preserve the original objects described in the caption (e.g., a laptop and monitor), and build on top of them with lighting, layout, and atmosphere enhancements.\n"
+                        "   The rewritten prompt MUST be under 70 tokens.\n\n"
+                        "2. Then, separately, suggest exactly 5 practical and stylish desk accessories that match the upgraded prompt.\n"
+                        "   Each item must be a short, search-friendly **keyword**, not a full sentence or description.\n"
+                        "   Use lowercase, concise nouns like: 'desk lamp', 'monitor stand', 'plant'.\n\n"
+                        "**Output Format (strict):**\n"
+                        "Prompt:\n<your styled prompt here (under 70 tokens)>\n\n"
+                        "Recommended Items:\n"
+                        "- item 1\n"
+                        "- item 2\n"
+                        "- item 3\n"
+                        "- item 4\n"
+                        "- item 5\n\n"
+                        "**Rules:**\n"
+                        "1. Do NOT remove or replace original caption objects (e.g., don't remove the laptop/monitor if they were mentioned).\n"
+                        "2. Do NOT change the scene type (e.g., do NOT move it to a coffee shop or bedroom).\n"
+                        "3. Only improve the style and detail of the existing scene.\n"
+                        "4. The generated scene should be captured from a clean, centered, front-facing camera angle — as if looking directly at the desk from eye level. Avoid tilted or top-down views.\n"
+                        "5. You MUST generate 5 recommended items. Never generate fewer than 5.\n"
+                        "6. If necessary, you may include objects from the original caption (e.g., laptop or monitor) as part of the 5 items.\n"
+                        "7. The recommended items must be **search-optimized keywords** — avoid long phrases or descriptive sentences."
                     )
                 },
                 {
                     "role": "user",
-                    "content": f"Caption: {caption}\nPlease rewrite this into a vivid image generation prompt."
+                    "content": (
+                        f"Here is a caption of a desk scene:\n\n"
+                        f"Caption: {caption}\n\n"
+                        "Please follow all instructions strictly.\n"
+                        "Rewrite the caption into a vivid, styled image generation prompt.\n"
+                        "Then suggest exactly 5 short, search-optimized desk accessory keywords as described above.\n"
+                        "Return the result in the exact output format requested."
+                    )
                 }
-                ],
-                temperature=0.6,
-                max_tokens = 70
+            ],
+            temperature=0.6,
+            max_tokens=300  # 🔼 추천: 70은 너무 작음 (prompt + list까지 포함 못함)
             )
             
             # 모델 삭제 및 가비지 메모리 정리, 캐시 삭제
