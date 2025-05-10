@@ -131,3 +131,20 @@ def run_image_generate(image_url: str, tmp_filename: str):
         gc.collect()
         torch.cuda.empty_cache()
         print("[INFO] VRAM cache 삭제 완료")
+        
+
+# 강제 종료 시 리소스 정리
+@app.on_event("shutdown")
+def shutdown_event():
+    print("[INFO] 서버 종료 요청 감지. 리소스 정리 시작...")
+
+    # BLIP 모델 제거
+    global task_queue
+    if hasattr(task_queue, "queue"):
+        with task_queue.mutex:
+            task_queue.queue.clear()
+        print("[INFO] Task Queue 비움 완료")
+
+    gc.collect()
+    torch.cuda.empty_cache()
+    print("[INFO] GPU 메모리 캐시 비움 완료")
