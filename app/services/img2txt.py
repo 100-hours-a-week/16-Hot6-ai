@@ -27,7 +27,7 @@ class ImageToText:
         
         self.model = self.model.to("cuda", torch.float16)
     
-    def parse_gpt_output(text: str) -> tuple[str, list[str]]:
+    def parse_gpt_output(self, text: str) -> tuple[str, list[str]]:
         prompt = ""
         items = []
 
