@@ -68,16 +68,16 @@ def run_image_generate(image_url: str, tmp_filename: str):
         print("[DEBUG] 전달된 URL:", image_url)
         print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
         img2txt = ImageToText()
-        prompt = img2txt.generate_text(image_url)
+        prompt, item_list  = img2txt.generate_text(image_url)
         print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
-
+        print(f"[INFO] Step 1 완료: 생성된 상품 리스트 = {item_list}")
         print("[INFO] Step 2: 텍스트 → 이미지 생성 시작")
         txt2img = TextToImage()
         generated_image_url = txt2img.generate_image(prompt)
         print(f"[INFO] Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
 
         print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
-        item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
+        # item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
         naver = NaverAPI(item_list)
         products = naver.run()
         print(f"[INFO] Step 3 완료: 추천된 제품 개수 = {len(products)}")
@@ -111,6 +111,18 @@ def run_image_generate(image_url: str, tmp_filename: str):
     except Exception as e:
         print(f"[ERROR] Exception during pipeline: {e}")
 
+        payload = {
+            "initial_image_url": image_url,
+            "processed_image_url": None,
+            "products": None,
+        }
+        response = requests.post(
+            backend_url,
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"}
+        )
+        print(f"[INFO] 이미지 전송 실패, Null 전송 = {response.status_code}")
+
     finally:
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
@@ -119,3 +131,20 @@ def run_image_generate(image_url: str, tmp_filename: str):
         gc.collect()
         torch.cuda.empty_cache()
         print("[INFO] VRAM cache 삭제 완료")
+        
+
+# 강제 종료 시 리소스 정리
+@app.on_event("shutdown")
+def shutdown_event():
+    print("[INFO] 서버 종료 요청 감지. 리소스 정리 시작...")
+
+    # BLIP 모델 제거
+    global task_queue
+    if hasattr(task_queue, "queue"):
+        with task_queue.mutex:
+            task_queue.queue.clear()
+        print("[INFO] Task Queue 비움 완료")
+
+    gc.collect()
+    torch.cuda.empty_cache()
+    print("[INFO] GPU 메모리 캐시 비움 완료")

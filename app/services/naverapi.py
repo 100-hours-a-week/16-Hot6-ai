@@ -47,13 +47,13 @@ class NaverAPI:
             cat3, cat4 = self.extract_categories(product)
 
             products.append({
-                "title": title,
+                "name": title,
                 "price": int(product["lprice"]),
-                "mall": mall,
+                "purchase_place": mall,
+                "purchase_url": product.get("link"),
+                "image_path": product.get("image"),
                 "main_category": cat3,
-                "sub_category": cat4,
-                "link": product.get("link"),
-                "image": product.get("image")
+                "sub_category": cat4
             })
         return products
 
