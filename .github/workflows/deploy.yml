@@ -41,6 +41,29 @@ jobs:
               UserKnownHostsFile /dev/null
           EOF
 
+      - name: Debug AI Dev Server
+        run: |
+          ssh -F ~/.ssh/config ai-dev-server <<'EOF'
+            set -eux
+            echo "== whoami =="
+            whoami
+      
+            echo "== echo \$HOME =="
+            echo "$HOME"
+      
+            echo "== pwd =="
+            pwd
+      
+            echo "== ls -al /home/ubuntu =="
+            ls -al /home/ubuntu || echo "/home/ubuntu not found"
+      
+            echo "== ls -al ~/ =="
+            ls -al ~ || echo "~ not found"
+      
+            echo "== ls -al . =="
+            ls -al .
+          EOF
+
       - name: Git Pull and Restart AI Service
         run: |
           ssh -F ~/.ssh/config ai-dev-server <<'EOF'
