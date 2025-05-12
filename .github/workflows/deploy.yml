@@ -5,13 +5,11 @@ on:
     branches:
       - main
       - dev
-      - feat/dev-cd
 
 jobs:
   deploy-dev:
     name: Deploy via Git Pull on Dev Server
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feat/dev-cd' }}
     environment: ${{ github.ref_name == 'main' && 'main' || 'dev' }}
 
     steps:
@@ -47,8 +45,8 @@ jobs:
             set -eux
             cd ~/ai-server
             git fetch origin
-            git reset --hard origin/feat/dev-cd
+            git reset --hard origin/dev
             git clean -fdx -e venv/
-            sudo systemctl daemon-reexec
+            sudo systemctl daemon-reload
             sudo systemctl restart ai.service
           EOF
