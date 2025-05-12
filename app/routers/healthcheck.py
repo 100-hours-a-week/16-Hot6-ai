@@ -1,8 +1,13 @@
 # fastapi_project/app/routers/healthcheck.py
 from fastapi import APIRouter
+import torch
+import os
 
 router = APIRouter()
 
-@router.get("/", summary="L4/L7 헬스체크 엔드포인트")
+@router.get("/health", tags=["Health Check"])
 async def healthcheck():
-    return {"status": "healthy"}
+    torch_available = torch.cuda.is_available()
+    return {"status": "ok" if torch_available else "CUDA error", 
+            "cuda_available": torch_available
+            }
