@@ -74,7 +74,7 @@ async def classify_image(req: ImageRequest):
 # ===== 이미지 생성 파이프라인 =====
 def run_image_generate(image_url: str, tmp_filename: str):
     try:
-        logger.info("전달된 URL:", image_url)
+        logger.info(f"전달된 URL: {image_url}")
         logger.info("Step 1: 이미지 → 텍스트 변환 시작")
         img2txt = ImageToText(app.state.blip_model, app.state.processor)
         prompt, item_list  = img2txt.generate_text(image_url)
@@ -106,7 +106,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
         )
         logger.info(f"Step 4 완료: HTTP response status code = {response.status_code}")
 
-        if response.status_code != 200 or response.status_code != 201:
+        if response.status_code != 200 and response.status_code != 201:
             logger.error(f"Failed to notify backend: {response.status_code}")
         else:
             short_payload = copy.deepcopy(payload)
