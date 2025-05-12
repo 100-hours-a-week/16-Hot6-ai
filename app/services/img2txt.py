@@ -2,28 +2,14 @@ import os, gc, torch, requests, openai
 import requests
 from io import BytesIO
 from PIL import Image
-# from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from app.core.config import settings
 
 class ImageToText:
-    def __init__(self):
-        self.blip_model = settings.BLIP_MODEL_PATH
-        if not self.blip_model:
-            raise ValueError("BLIP_MODEL_PATH is not set in the environment or .env file.")
-        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY))
-        self.processor = BlipProcessor.from_pretrained(self.blip_model, use_fast=True)
-        self.model = BlipForConditionalGeneration.from_pretrained(
-            self.blip_model,
-            torch_dtype=torch.float16,
-        )
-        # self.processor = Blip2Processor.from_pretrained(self.blip_model,use_fast = True)
-        # self.model = Blip2ForConditionalGeneration.from_pretrained(
-        #     self.blip_model,
-        #     torch_dtype = torch.float16,
-        # )
-        
-        self.model = self.model.to("cuda", torch.float16)
+    def __init__(self, blip_model, processor):
+        self.blip_model = blip_model
+        self.processor = processor
+        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
     
     def parse_gpt_output(self, text: str) -> tuple[str, list[str]]:
         prompt = ""
@@ -94,7 +80,7 @@ class ImageToText:
             print("[INFO] Processor 호출 시작")
             inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
             print("[INFO] 모델로부터 캡션 생성 중...")
-            generated_ids = self.model.generate(**inputs.to("cuda"), max_new_tokens=50)
+            generated_ids = self.blip_model.generate(**inputs.to("cuda"), max_new_tokens=50)
             caption = self.processor.tokenizer.decode(generated_ids[0], skip_special_tokens = True)
 
             print(f"[INFO] Caption: {caption}")
@@ -148,12 +134,6 @@ class ImageToText:
             max_tokens=300  # 🔼 추천: 70은 너무 작음 (prompt + list까지 포함 못함)
             )
             
-            # 모델 삭제 및 가비지 메모리 정리, 캐시 삭제
-            del self.model
-            del self.processor
-            del inputs
-            del generated_ids
-            del caption
             gc.collect()
             torch.cuda.empty_cache()
             print(f"[DEBUG] After upload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
