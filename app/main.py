@@ -9,7 +9,7 @@ from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
 from startup import init_models
-from app.core.config import settings
+from core.config import settings
 app = FastAPI()
 
 @app.on_event("startup")
