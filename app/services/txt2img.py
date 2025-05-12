@@ -1,26 +1,18 @@
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from PIL import Image
 from io import BytesIO
-from dotenv import load_dotenv
 import boto3, gc, os, uuid, torch
+from app.core.config import settings
 
 class TextToImage:
     def __init__(self):
         # Model 위치도 dotenv로 관리
-        load_dotenv()
-        
-        self.base_model = os.getenv("BASE_MODEL_PATH")
-        self.vae = os.getenv("VAE_PATH")
-        self.ott_lora = os.getenv("OTT_LORA_PATH")
-        self.d3_lora = os.getenv("3D_LORA_PATH")
-        self.s3_bucket_name = os.getenv("S3_BUCKET_NAME")
-        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        self.base_model = settings.BASE_MODEL_PATH
 
         self.s3_client = boto3.client(
             "s3",
-            aws_access_key_id = aws_access_key_id,
-            aws_secret_access_key = aws_secret_access_key,
+            aws_access_key_id = settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY,
         )
 
         self.pipe = StableDiffusionXLPipeline.from_single_file(
@@ -35,19 +27,19 @@ class TextToImage:
         
         
         self.pipe.vae = AutoencoderKL.from_single_file(
-            self.vae,
+            settings.VAE_PATH,
             torch_dtype = torch.float16,
         ).to("cuda")
         print(f"[DEBUG] After vae - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
         
         self.pipe.load_lora_weights(
-            self.ott_lora,
-            weight_name = os.path.basename(self.ott_lora),
+            settings.OTT_LORA_PATH,
+            weight_name = os.path.basename(settings.OTT_LORA_PATH),
             adapter_name = "ott_lora"
         )
         self.pipe.load_lora_weights(
-            self.d3_lora,
-            weight_name = os.path.basename(self.d3_lora),
+            settings.LORA_3D_PATH,
+            weight_name = os.path.basename(settings.LORA_3D_PATH),
             adapter_name = "d3_lora"
         )
         print(f"[DEBUG] After Lora - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
@@ -83,7 +75,7 @@ class TextToImage:
 
         self.s3_client.upload_fileobj(
             buffer,
-            self.s3_bucket_name,
+            settings.S3_BUCKET_NAME,
             s3_key,
             ExtraArgs={"ContentType": "image/png"}
         )

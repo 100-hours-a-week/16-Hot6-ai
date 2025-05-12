@@ -4,14 +4,13 @@ import requests
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict, Any
-from dotenv import load_dotenv
+from app.core.config import settings
 
 class NaverAPI:
     def __init__(self, itemlist: List[str]):
-        load_dotenv()
         self.itemlist = itemlist
-        self.client_id = os.getenv("NAVER_CLIENT_ID")
-        self.client_secret = os.getenv("NAVER_CLIENT_SECRET")
+        self.client_id = settings.NAVER_CLIENT_ID
+        self.client_secret = settings.NAVER_CLIENT_SECRET
 
     def clean_html(self, raw_html: str) -> str:
         return re.sub(re.compile('<.*?>'), '', raw_html)
