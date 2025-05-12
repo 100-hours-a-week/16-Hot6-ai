@@ -1,4 +1,4 @@
-from app.core.config import settings
+from core.config import settings
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 import torch

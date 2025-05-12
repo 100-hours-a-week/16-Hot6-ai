@@ -1,7 +1,7 @@
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from io import BytesIO
 import boto3, gc, os, uuid, torch
-from app.core.config import settings
+from core.config import settings
 
 class TextToImage:
     def __init__(self, pipe):

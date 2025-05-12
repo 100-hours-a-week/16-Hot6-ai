@@ -3,7 +3,7 @@ import requests
 from io import BytesIO
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from app.core.config import settings
+from core.config import settings
 
 class ImageToText:
     def __init__(self, blip_model, processor):

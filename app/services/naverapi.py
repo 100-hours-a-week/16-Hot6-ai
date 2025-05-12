@@ -4,7 +4,7 @@ import requests
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict, Any
-from app.core.config import settings
+from core.config import settings
 
 class NaverAPI:
     def __init__(self, itemlist: List[str]):
