@@ -1,0 +1,52 @@
+name: AI Git Pull & Restart
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy-dev:
+    name: Deploy via Git Pull on Dev Server
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'main' || 'dev' }}
+
+    steps:
+      - name: Set up SSH config for jump server
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.JUMP_SSH_KEY }}" > ~/.ssh/jump_key
+          chmod 600 ~/.ssh/jump_key
+
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/dev_key
+          chmod 600 ~/.ssh/dev_key
+
+          cat <<EOF > ~/.ssh/config
+          Host ai-dev-server
+              HostName ${{ secrets.SSH_HOST }}
+              User ubuntu
+              IdentityFile ~/.ssh/dev_key
+              ProxyJump jump-server
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+
+          Host jump-server
+              HostName ${{ secrets.JUMP_SSH_HOST }}
+              User ubuntu
+              IdentityFile ~/.ssh/jump_key
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+          EOF
+
+      - name: Git Pull and Restart AI Service
+        run: |
+          ssh -F ~/.ssh/config ai-dev-server <<'EOF'
+            set -eux
+            cd ~/ai-server
+            git fetch origin
+            git reset --hard origin/dev
+            git clean -fdx -e venv/
+            sudo systemctl daemon-reload
+            sudo systemctl restart ai.service
+          EOF
