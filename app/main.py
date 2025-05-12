@@ -8,11 +8,13 @@ from queue import Queue
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
-# from startup import initialize_cuda
+from startup import init_models
 from app.core.config import settings
 app = FastAPI()
-# initialize_cuda()
-load_dotenv()
+
+@app.on_event("startup")
+def startup_event():
+    init_models(app)
 
 # ===== Queue 기반 직렬 실행 설정 =====
 task_queue = Queue()
@@ -67,12 +69,12 @@ def run_image_generate(image_url: str, tmp_filename: str):
     try:
         print("[DEBUG] 전달된 URL:", image_url)
         print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
-        img2txt = ImageToText()
+        img2txt = ImageToText(app.state.blip_model, app.state.processor)
         prompt, item_list  = img2txt.generate_text(image_url)
         print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
         print(f"[INFO] Step 1 완료: 생성된 상품 리스트 = {item_list}")
         print("[INFO] Step 2: 텍스트 → 이미지 생성 시작")
-        txt2img = TextToImage()
+        txt2img = TextToImage(app.state.pipe)
         generated_image_url = txt2img.generate_image(prompt)
         print(f"[INFO] Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
 
