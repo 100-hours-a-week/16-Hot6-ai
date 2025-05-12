@@ -2,6 +2,9 @@ from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from io import BytesIO
 import boto3, gc, os, uuid, torch
 from core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TextToImage:
     def __init__(self, pipe):
@@ -13,8 +16,7 @@ class TextToImage:
             aws_access_key_id = settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY,
         )
-        print(f"[DEBUG] After Lora - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
-        print("[INFO] txt2img generator initialized and lora fused.")
+        logger.info("txt2img 불러오기 완료")
 
     def generate_image(self, prompt: str, negative_prompt: str = None) -> str:
         if negative_prompt is None:
@@ -49,7 +51,7 @@ class TextToImage:
         )
         gc.collect()
         torch.cuda.empty_cache()
-        print(f"[DEBUG] After upload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
+        logger.info("이미지 생성 완료")
         
 
         return f"https://img.onthe-top.com/{unique_id}.png"
