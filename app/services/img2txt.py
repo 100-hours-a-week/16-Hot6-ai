@@ -4,16 +4,14 @@ from io import BytesIO
 from PIL import Image
 # from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from dotenv import load_dotenv
+from app.core.config import settings
 
 class ImageToText:
     def __init__(self):
-        # Model 위치도 dotenv로 관리
-        load_dotenv()
-        self.blip_model = os.getenv("BLIP_MODEL_PATH")
+        self.blip_model = settings.BLIP_MODEL_PATH
         if not self.blip_model:
             raise ValueError("BLIP_MODEL_PATH is not set in the environment or .env file.")
-        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY))
         self.processor = BlipProcessor.from_pretrained(self.blip_model, use_fast=True)
         self.model = BlipForConditionalGeneration.from_pretrained(
             self.blip_model,

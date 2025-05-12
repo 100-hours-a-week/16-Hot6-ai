@@ -9,7 +9,7 @@ from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
 # from startup import initialize_cuda
-
+from app.core.config import settings
 app = FastAPI()
 # initialize_cuda()
 load_dotenv()
