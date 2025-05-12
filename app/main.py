@@ -2,15 +2,22 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import requests, json, os, threading, copy
 import torch, gc
-from dotenv import load_dotenv
 from queue import Queue
+import logging
 
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
 from startup import init_models
 from core.config import settings
+
 app = FastAPI()
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 def startup_event():
@@ -57,7 +64,7 @@ async def classify_image(req: ImageRequest):
 
     # ✅ 작업 큐에 넣고 순차 처리
     task_queue.put((image_url, tmp_filename))
-    print("[DEBUG] Queue 처리, MVP이후 번호 넣을 수 있으면 넣어보기")
+    #print("[DEBUG] Queue 처리, MVP이후 번호 넣을 수 있으면 넣어보기")
 
     return {
         "initial_image_url": image_url,
@@ -67,24 +74,24 @@ async def classify_image(req: ImageRequest):
 # ===== 이미지 생성 파이프라인 =====
 def run_image_generate(image_url: str, tmp_filename: str):
     try:
-        print("[DEBUG] 전달된 URL:", image_url)
-        print("[INFO] Step 1: 이미지 → 텍스트 변환 시작")
+        logger.info("전달된 URL:", image_url)
+        logger.info("Step 1: 이미지 → 텍스트 변환 시작")
         img2txt = ImageToText(app.state.blip_model, app.state.processor)
         prompt, item_list  = img2txt.generate_text(image_url)
-        print(f"[INFO] Step 1 완료: 생성된 프롬프트 = {prompt}")
-        print(f"[INFO] Step 1 완료: 생성된 상품 리스트 = {item_list}")
-        print("[INFO] Step 2: 텍스트 → 이미지 생성 시작")
+        logger.info(f"Step 1 완료: 생성된 프롬프트 = {prompt}")
+        logger.info(f"Step 1 완료: 생성된 상품 리스트 = {item_list}")
+        logger.info("Step 2: 텍스트 → 이미지 생성 시작")
         txt2img = TextToImage(app.state.pipe)
         generated_image_url = txt2img.generate_image(prompt)
-        print(f"[INFO] Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
+        logger.info(f"Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
 
         print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
         # item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
         naver = NaverAPI(item_list)
         products = naver.run()
-        print(f"[INFO] Step 3 완료: 추천된 제품 개수 = {len(products)}")
+        logger.info(f"Step 3 완료: 추천된 제품 개수 = {len(products)}")
 
-        print("[INFO] Step 4: 백엔드로 결과 전송 시도")
+        logger.info("Step 4: 백엔드로 결과 전송 시도")
         backend_url = os.getenv("RESULT_POST_URL")
         payload = {
             "initial_image_url": image_url,
@@ -97,10 +104,10 @@ def run_image_generate(image_url: str, tmp_filename: str):
             data=json.dumps(payload),
             headers={"Content-Type": "application/json"}
         )
-        print(f"[INFO] Step 4 완료: HTTP response status code = {response.status_code}")
+        logger.info(f"Step 4 완료: HTTP response status code = {response.status_code}")
 
-        if response.status_code != 200:
-            print(f"[ERROR] Failed to notify backend: {response.status_code}")
+        if response.status_code != 200 or response.status_code != 201:
+            logger.error(f"Failed to notify backend: {response.status_code}")
         else:
             short_payload = copy.deepcopy(payload)
             if "products" in short_payload and len(short_payload["products"]) > 2:
@@ -108,10 +115,10 @@ def run_image_generate(image_url: str, tmp_filename: str):
                 short_payload["products"] = short_payload["products"][:2]
                 short_payload["products"].append(f"... ({original_count - 2} more items)")
 
-            print("[DEBUG] payload:", json.dumps(short_payload, indent=2, ensure_ascii=False))
+            logger.info("전달된 payload:", json.dumps(short_payload, indent=2, ensure_ascii=False))
 
     except Exception as e:
-        print(f"[ERROR] Exception during pipeline: {e}")
+        logger.error(f"Exception during pipeline: {e}")
 
         payload = {
             "initial_image_url": image_url,
@@ -123,30 +130,30 @@ def run_image_generate(image_url: str, tmp_filename: str):
             data=json.dumps(payload),
             headers={"Content-Type": "application/json"}
         )
-        print(f"[INFO] 이미지 전송 실패, Null 전송 = {response.status_code}")
+        logger.infor(f"이미지 전송 실패, Null 전송 = {response.status_code}")
 
     finally:
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
-            print("[INFO] 임시 파일 삭제 완료")
+            logger.info("임시 파일 삭제 완료")
 
         gc.collect()
         torch.cuda.empty_cache()
-        print("[INFO] VRAM cache 삭제 완료")
+        logger.info("VRAM cache 삭제 완료")
         
 
 # 강제 종료 시 리소스 정리
 @app.on_event("shutdown")
 def shutdown_event():
-    print("[INFO] 서버 종료 요청 감지. 리소스 정리 시작...")
+    logger.info("서버 종료 요청 감지. 리소스 정리 시작...")
 
     # BLIP 모델 제거
     global task_queue
     if hasattr(task_queue, "queue"):
         with task_queue.mutex:
             task_queue.queue.clear()
-        print("[INFO] Task Queue 비움 완료")
+        logger.info("Task Queue 비움 완료")
 
     gc.collect()
     torch.cuda.empty_cache()
-    print("[INFO] GPU 메모리 캐시 비움 완료")
+    logger.info("GPU 메모리 캐시 비움 완료")

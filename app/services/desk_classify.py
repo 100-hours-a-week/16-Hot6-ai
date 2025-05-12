@@ -4,6 +4,9 @@ from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from tensorflow.keras.models import load_model
 from core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Desk_classifier:
     def __init__(self, threshold = 0.5):
@@ -19,5 +22,5 @@ class Desk_classifier:
 
         prob = self.model.predict(x)[0][0]
         classify = bool(prob >= self.threshold)
-        print(f"[DEBUG] Desk Classify = {classify}")
+        logger.info(f"Desk Classify = {classify}")
         return classify

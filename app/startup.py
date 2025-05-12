@@ -4,6 +4,10 @@ from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 import torch
 import os
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def init_models(app):
     # BLIP 불러오기
     blip_model_path = settings.BLIP_MODEL_PATH
@@ -15,7 +19,7 @@ def init_models(app):
     )
 
     blip_model = blip_model.to("cuda", torch.float16)
-    print("[INFO] BLIP 불러오기 완료")
+    logger.info("BLIP 모델 로딩 완료")
 
     # SDXL 불러오기
     pipe = StableDiffusionXLPipeline.from_single_file(
@@ -44,9 +48,9 @@ def init_models(app):
 
     pipe.set_adapters(["ott_lora", "d3_lora"], [0.7, 0.5])
     pipe.fuse_lora()
-    print("[INFO] SDXL 불러오기 완료")
+    logger.info("SDXL 모델 로딩 완료")
 
     app.state.blip_model = blip_model
     app.state.processor = processor
     app.state.pipe = pipe
-    print("[INFO] 모델 초기화 완료")
+    logger.info("모델 초기화 완료")

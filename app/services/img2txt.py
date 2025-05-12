@@ -4,6 +4,9 @@ from io import BytesIO
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ImageToText:
     def __init__(self, blip_model, processor):
@@ -40,11 +43,11 @@ class ImageToText:
 
             return prompt, items
         except Exception as e:
-            print(f"[ERROR] GPT 응답 파싱 실패: {e}")
-            print(f"[DEBUG] 원본 GPT 응답:\n{text}")
+            logger.error(f"GPT 응답 파싱 실패: {e}")
+            logger.info(f"원본 GPT 응답:\n{text}")
             
             fallback_prompt = text.split("Prompt:")[-1].split("Recommended Items:")[0].strip() if "Prompt:" in text else ""
-            print("[INFO] 기본 추천 키워드로 대체합니다.")
+            logger.info("기본 추천 키워드로 대체합니다.")
             return fallback_prompt, [
                 "mouse", 
                 "desk mat", 
@@ -70,20 +73,16 @@ class ImageToText:
         if not url:
             raise ValueError("[Error] url is None.")
         try:
-            print(f"[DEBUG] 전달된 url: {url}")
-
-            print("[INFO] 이미지 받아오는 중")
+            logger.info("이미지 받아오는 중")
             response = requests.get(url)
             image = Image.open(BytesIO(response.content)).convert("RGB")
             image = image.resize((512, 512))
             
-            print("[INFO] Processor 호출 시작")
             inputs = self.processor(images=image, return_tensors="pt").to("cuda", torch.float16)
-            print("[INFO] 모델로부터 캡션 생성 중...")
             generated_ids = self.blip_model.generate(**inputs.to("cuda"), max_new_tokens=50)
             caption = self.processor.tokenizer.decode(generated_ids[0], skip_special_tokens = True)
 
-            print(f"[INFO] Caption: {caption}")
+            logger.info(f"Caption: {caption}")
 
             # GPT-4o Prompts 생성
             response = self.client.chat.completions.create(
@@ -136,8 +135,7 @@ class ImageToText:
             
             gc.collect()
             torch.cuda.empty_cache()
-            print(f"[DEBUG] After upload - Allocated: {torch.cuda.memory_allocated()/1024**2:.2f} MB")
-            print("[INFO] Prompt 생성 완료")
+            logger.info("Prompt 생성 완료")
             # generated_prompt = response.choices[0].message.content
             # generated_prompt = self.clean_prompt(generated_prompt)
             generated_prompt = response.choices[0].message.content
@@ -148,5 +146,5 @@ class ImageToText:
             return cleaned_prompt, items
         
         except Exception as e:
-            print(f"[Error] generate_text() 실패: {e}")
+            logger.error(f"generate_text() 실패: {e}")
             return None
