@@ -1,5 +1,8 @@
 # app/core/config.py
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 class Settings:
     """AI 서버 환경 설정 클래스"""
