@@ -10,8 +10,11 @@ from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
 from startup import init_models
 from core.config import settings
+from routers import healthcheck
 
 app = FastAPI()
+# healthcheck
+app.include_router(healthcheck.router)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
