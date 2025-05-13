@@ -10,19 +10,28 @@ class GPT_API:
     def parse_gpt_output(self, text: str) -> tuple[str, list[str]]:
         prompt = ""
         items = []
-
         try:
             lines = text.strip().splitlines()
             reading_items = False
 
             for line in lines:
-                if line.strip().lower().startswith("prompt:"):
+                line_lower = line.lower().strip()
+
+                # Prompt 라벨 감지
+                if line_lower.startswith("prompt:"):
                     prompt = line.split(":", 1)[1].strip()
-                    reading_items = False
-                elif line.strip().lower().startswith("recommended items"):
+                    continue
+
+                # Recommended Items 시작
+                if "recommended items" in line_lower:
                     reading_items = True
                     continue
-                elif reading_items and line.strip().startswith(("-", "•")):
+
+                # 프롬프트가 Prompt 라벨 없이 바로 오는 경우
+                if not prompt and not reading_items and line.strip():
+                    prompt = line.strip()
+
+                if reading_items and line.strip().startswith(("-", "•")):
                     items.append(line.strip("-• ").strip())
 
             if not prompt:
@@ -36,8 +45,9 @@ class GPT_API:
             logger.error(f"GPT output parsing failed: {e}")
             logger.info(f"Raw GPT output:\n{text}")
             return "clean white desk with laptop and monitor", [
-                "desk lamp", "monitor stand", "plant", "keyboard", "mug"
+                "desk lamp", "monitor stand", "potted plant", "keyboard", "mug"
             ]
+
 
 
     # Prompt 정리(불필요한 단어 제거)
@@ -74,8 +84,9 @@ class GPT_API:
                     temperature=0.6,
                     max_tokens=300  # 🔼 추천: 70은 너무 작음 (prompt + list까지 포함 못함)
                     )      
-        generate_prompt = response.choices[0].message.content
-        cleaned_prompt, items = self.parse_gpt_output(generate_prompt)
+        generated_prompt = response.choices[0].message.content
+        logger.info(f"GPT-4o 응답: {generated_prompt}")
+        cleaned_prompt, items = self.parse_gpt_output(generated_prompt)
         cleaned_prompt = self.clean_prompt(cleaned_prompt)
         
         logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
