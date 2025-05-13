@@ -92,6 +92,3 @@ class GPT_API:
         logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
         logger.info(f"Step 1 완료: 생성된 상품 리스트 = {items}")
         return cleaned_prompt, items
-
-print(settings.SYSTEM_PROMPT)
-print(settings.USER_PROMPT)
