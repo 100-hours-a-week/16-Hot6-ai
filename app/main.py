@@ -10,6 +10,7 @@ from services.naverapi import NaverAPI
 from services.backend_notify import notify_backend
 from utils.s3 import S3
 from utils.clear_cache import clear_cache
+from utils.queue_manager import task_queue
 from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 def startup_event():
     init_models(app)
+    threading.Thread(target=image_worker, daemon=True).start()
 
 @app.on_event("shutdown")
 def shutdown_gpu():
@@ -36,7 +38,6 @@ def shutdown_gpu():
 
 
 # ===== Queue 기반 직렬 실행 설정 =====
-task_queue = Queue()
 
 def image_worker():
     while True:
@@ -47,9 +48,6 @@ def image_worker():
             print(f"[ERROR] Image task failed: {e}")
         finally:
             task_queue.task_done()
-
-# 서버 시작 시 백그라운드 쓰레드 실행
-threading.Thread(target=image_worker, daemon=True).start()
 
 # ===== FastAPI 요청 모델 =====
 class ImageRequest(BaseModel):
@@ -74,7 +72,7 @@ async def classify_image(req: ImageRequest):
             "classify": "false"
         }
 
-    # ✅ 작업 큐에 넣고 순차 처리
+    # 작업 큐에 넣고 순차 처리
     task_queue.put((image_url, tmp_filename))
     #print("[DEBUG] Queue 처리, MVP이후 번호 넣을 수 있으면 넣어보기")
 
