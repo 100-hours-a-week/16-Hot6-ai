@@ -1,5 +1,5 @@
-import os, gc, torch, requests
 import requests
+import torch
 from io import BytesIO
 from PIL import Image
 from core.config import settings
@@ -16,7 +16,7 @@ class ImageToText:
         if not url:
             raise ValueError("[Error] url is None.")
         try:
-            logger.info("이미지 받아오는 중")
+            logger.info(f"전달된 URL: {url}")
             response = requests.get(url)
             image = Image.open(BytesIO(response.content)).convert("RGB")
             image = image.resize((512, 512))
@@ -25,12 +25,7 @@ class ImageToText:
             generated_ids = self.blip_model.generate(**inputs.to("cuda"), max_new_tokens=50)
             caption = self.processor.tokenizer.decode(generated_ids[0], skip_special_tokens = True)
 
-            logger.info(f"Caption: {caption}")
-
-            
-            gc.collect()
-            torch.cuda.empty_cache()
-            logger.info("Caption 생성 완료")
+            logger.info(f"Caption 생성 완료: {caption}")
             
             # 여기서 추천 아이템은 어떤 식으로 뽑아올 지 좀 더 고민
             return caption

@@ -1,5 +1,3 @@
-from io import BytesIO
-import boto3, gc, os, uuid, torch
 from core.config import settings
 import logging
 
