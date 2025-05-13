@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import requests, os, threading
 from queue import Queue
 import logging
-
+from shutdown import shutdown_event
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
@@ -29,6 +29,11 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 def startup_event():
     init_models(app)
+
+@app.on_event("shutdown")
+def shutdown_gpu():
+    shutdown_event(app)
+
 
 # ===== Queue 기반 직렬 실행 설정 =====
 task_queue = Queue()
@@ -113,21 +118,3 @@ def run_image_generate(image_url: str, tmp_filename: str):
         clear_cache()
         logger.info("VRAM cache 삭제 완료")
         
-
-# 강제 종료 시 리소스 정리
-@app.on_event("shutdown")
-def shutdown_event():
-    logger.info("서버 종료 요청 감지. 리소스 정리 시작...")
-
-    # BLIP 모델 제거
-    global task_queue
-    if hasattr(task_queue, "queue"):
-        with task_queue.mutex:
-            task_queue.queue.clear()
-        logger.info("Task Queue 비움 완료")
-
-    del app.state.pipe
-    del app.state.blip_model
-    del app.state.processor
-    clear_cache()
-    logger.info("GPU 메모리 캐시 비움 완료")
