@@ -19,11 +19,11 @@ def notify_backend(image_url: str, generated_image_url: str = None, products: li
             data=json.dumps(payload),
             headers={"Content-Type": "application/json"}
         )
-        logger.info(f"[Backend Notify] Response code: {response.status_code}")
 
         if response.status_code not in (200, 201):
-            logger.error(f"[Backend Notify] Failed: {response.status_code}")
+            logger.error(f"[Backend Notify] Response code: {response.status_code}")
         else:
+            logger.info(f"[Backend Notify] Response code: {response.status_code}")
             short_payload = copy.deepcopy(payload)
             if products and len(products) > 2:
                 short_payload["products"] = products[:2]
