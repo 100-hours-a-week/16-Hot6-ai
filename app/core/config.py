@@ -26,10 +26,12 @@ class Settings:
     OTT_LORA_PATH: str = os.getenv("OTT_LORA_PATH", "")
     LORA_3D_PATH: str = os.getenv("3D_LORA_PATH", "")
 
-
-    # =====================
-    # ⚙️ 기타 설정 추후 추가 예정
-    # =====================
+    # 프롬프트 템플릿
+    SYSTEM_PROMPT: str = os.getenv("SYSTEM_PROMPT", "").replace("\\n", "\n")
+    USER_PROMPT: str =(os.getenv("USER_PROMPT", "").replace("\\n", "\n"))  # 사용자 프롬프트 템플릿
+    NEGATIVE_PROMPT: str = os.getenv("NEGATIVE_PROMPT", "")  # 부정 프롬프트 템플릿
+    
+    # 기타 설정 / 추후 추가 필요
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     ENV: str = os.getenv("ENV", "development")
 

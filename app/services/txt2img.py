@@ -1,4 +1,3 @@
-from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from io import BytesIO
 import boto3, gc, os, uuid, torch
 from core.config import settings
@@ -20,12 +19,7 @@ class TextToImage:
 
     def generate_image(self, prompt: str, negative_prompt: str = None) -> str:
         if negative_prompt is None:
-            negative_prompt = (
-                    "illustration, cartoon, anime, sketch, painting, 3d render, "
-                    "blurry, low resolution, low quality, overexposed, underexposed, "
-                    "text, watermark, distorted, unrealistic, abstract, surreal, disfigured, "
-                    "duplicate, artifacts, lens flare, dramatic lighting, unnatural lighting"
-                    )
+            negative_prompt = settings.NEGATIVE_PROMPT
         
         image = self.pipe(
             prompt = prompt,
