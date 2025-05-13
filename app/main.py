@@ -8,6 +8,8 @@ import logging
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
+from utils.s3 import S3
+from utils.clear_cache import clear_cache
 from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
@@ -97,8 +99,11 @@ def run_image_generate(image_url: str, tmp_filename: str):
         
         logger.info("Step 2: 텍스트 → 이미지 생성 시작")
         txt2img = TextToImage(app.state.pipe)
-        generated_image_url = txt2img.generate_image(prompt)
+        image = txt2img.generate_image(prompt)
+        s3 = S3()
+        generated_image_url = s3.save_s3(image)
         logger.info(f"Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
+        clear_cache()
 
         print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
         
@@ -152,8 +157,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
             os.remove(tmp_filename)
             logger.info("임시 파일 삭제 완료")
 
-        gc.collect()
-        torch.cuda.empty_cache()
+        clear_cache()
         logger.info("VRAM cache 삭제 완료")
         
 
@@ -169,6 +173,8 @@ def shutdown_event():
             task_queue.queue.clear()
         logger.info("Task Queue 비움 완료")
 
-    gc.collect()
-    torch.cuda.empty_cache()
+    del app.state.pipe
+    del app.state.blip_model
+    del app.state.processor
+    clear_cache()
     logger.info("GPU 메모리 캐시 비움 완료")
