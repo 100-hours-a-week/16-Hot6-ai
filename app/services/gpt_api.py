@@ -86,4 +86,7 @@ class GPT_API:
         generate_prompt = response.choices[0].message.content
         cleaned_prompt, items = self.parse_gpt_output(generate_prompt)
         cleaned_prompt = self.clean_prompt(cleaned_prompt)
+        
+        logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
+        logger.info(f"Step 1 완료: 생성된 상품 리스트 = {items}")
         return cleaned_prompt, items

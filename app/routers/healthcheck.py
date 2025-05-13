@@ -1,7 +1,5 @@
-# fastapi_project/app/routers/healthcheck.py
 from fastapi import APIRouter
 import torch
-import os
 
 router = APIRouter()
 

@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import requests, json, os, threading, copy
-import torch, gc
+import requests, os, threading
 from queue import Queue
 import logging
 
 from services.img2txt import ImageToText
 from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
+from services.backend_notify import notify_backend
 from utils.s3 import S3
 from utils.clear_cache import clear_cache
 from services.gpt_api import GPT_API
@@ -81,76 +81,29 @@ async def classify_image(req: ImageRequest):
 # ===== 이미지 생성 파이프라인 =====
 def run_image_generate(image_url: str, tmp_filename: str):
     try:
-        logger.info(f"전달된 URL: {image_url}")
-        logger.info("Step 1: 이미지 → 텍스트 변환 시작")
         img2txt = ImageToText(app.state.blip_model, app.state.processor)
-        
         caption  = img2txt.generate_text(image_url)
-        logger.info(f"Step 1 완료: 생성된 캡션 = {caption}")
         if not caption:
             raise ValueError("[Error] Caption is None.")
         
-        logger.info("Step 1: GPT-4o 모델에 요청 시작")
         generate_prompt_gpt = GPT_API(app.state.gpt_client)
         prompt, item_list = generate_prompt_gpt.generate_prompt(caption)
-        logger.info(f"Step 1 완료: 생성된 프롬프트 = {prompt}")
-        logger.info(f"Step 1 완료: 생성된 상품 리스트 = {item_list}")
+        clear_cache()
         
-        
-        logger.info("Step 2: 텍스트 → 이미지 생성 시작")
         txt2img = TextToImage(app.state.pipe)
         image = txt2img.generate_image(prompt)
         s3 = S3()
         generated_image_url = s3.save_s3(image)
-        logger.info(f"Step 2 완료: 생성된 이미지 URL = {generated_image_url}")
         clear_cache()
 
-        print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
-        
         naver = NaverAPI(item_list)
         products = naver.run()
-        logger.info(f"Step 3 완료: 추천된 제품 개수 = {len(products)}")
 
-        logger.info("Step 4: 백엔드로 결과 전송 시도")
-        backend_url = os.getenv("RESULT_POST_URL")
-        payload = {
-            "initial_image_url": image_url,
-            "processed_image_url": generated_image_url,
-            "products": products
-        }
-
-        response = requests.post(
-            backend_url,
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"}
-        )
-        logger.info(f"Step 4 완료: HTTP response status code = {response.status_code}")
-
-        if response.status_code != 200 and response.status_code != 201:
-            logger.error(f"Failed to notify backend: {response.status_code}")
-        else:
-            short_payload = copy.deepcopy(payload)
-            if "products" in short_payload and len(short_payload["products"]) > 2:
-                original_count = len(short_payload["products"])
-                short_payload["products"] = short_payload["products"][:2]
-                short_payload["products"].append(f"... ({original_count - 2} more items)")
-
-            logger.info("전달된 payload:", json.dumps(short_payload, indent=2, ensure_ascii=False))
+        notify_backend(image_url, generated_image_url, products)
 
     except Exception as e:
-        logger.error(f"Exception during pipeline: {e}")
-
-        payload = {
-            "initial_image_url": image_url,
-            "processed_image_url": None,
-            "products": None,
-        }
-        response = requests.post(
-            backend_url,
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"}
-        )
-        logger.infor(f"이미지 전송 실패, Null 전송 = {response.status_code}")
+        logger.error(f"Exception during image generate pipeline: {e}")
+        notify_backend(image_url)
 
     finally:
         if os.path.exists(tmp_filename):
