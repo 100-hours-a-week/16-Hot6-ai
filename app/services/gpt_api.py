@@ -8,40 +8,37 @@ class GPT_API:
         self.client = client
         
     def parse_gpt_output(self, text: str) -> tuple[str, list[str]]:
-        """
-        Parse GPT JSON response safely, even if the string includes surrounding text or markdown code blocks.
-        """
+        prompt = ""
+        items = []
+
         try:
-            # ✨ Step 1: 추출 - 코드 블록이나 여분의 문자가 있을 수 있으므로 JSON 부분만 추출
-            json_text_match = re.search(r"\{.*\}", text, re.DOTALL)
-            if not json_text_match:
-                raise ValueError("JSON block not found in GPT response.")
+            lines = text.strip().splitlines()
+            reading_items = False
 
-            json_str = json_text_match.group(0)
-
-            # ✨ Step 2: 로드 - JSON 파싱
-            parsed = json.loads(json_str)
-
-            prompt = parsed.get("prompt", "").strip()
-            items = parsed.get("recommended_items", [])
+            for line in lines:
+                if line.strip().lower().startswith("prompt:"):
+                    prompt = line.split(":", 1)[1].strip()
+                    reading_items = False
+                elif line.strip().lower().startswith("recommended items"):
+                    reading_items = True
+                    continue
+                elif reading_items and line.strip().startswith(("-", "•")):
+                    items.append(line.strip("-• ").strip())
 
             if not prompt:
-                raise ValueError("Prompt missing.")
-            if not isinstance(items, list) or len(items) < 3:
-                raise ValueError("Invalid recommended_items.")
+                raise ValueError("Prompt not found in GPT output.")
+            if len(items) < 3:
+                raise ValueError("Not enough items.")
 
             return prompt, items
 
         except Exception as e:
-            logger.error(f"[GPT 파싱 오류] {e}")
-            logger.info(f"[GPT 응답 원문]:\n{text}")
-            return "clean white desk with laptop", [
-                "desk lamp",
-                "monitor riser",
-                "potted plant",
-                "ceramic mug",
-                "notebook"
+            logger.error(f"GPT output parsing failed: {e}")
+            logger.info(f"Raw GPT output:\n{text}")
+            return "clean white desk with laptop and monitor", [
+                "desk lamp", "monitor stand", "plant", "keyboard", "mug"
             ]
+
 
     # Prompt 정리(불필요한 단어 제거)
     def clean_prompt(self, prompt: str) -> str:
