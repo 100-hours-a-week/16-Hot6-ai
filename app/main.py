@@ -10,6 +10,7 @@ from services.txt2img import TextToImage
 from services.naverapi import NaverAPI
 from utils.s3 import S3
 from utils.clear_cache import clear_cache
+from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
 from routers import healthcheck
@@ -17,6 +18,7 @@ from routers import healthcheck
 app = FastAPI()
 # healthcheck
 app.include_router(healthcheck.router)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -82,9 +84,19 @@ def run_image_generate(image_url: str, tmp_filename: str):
         logger.info(f"전달된 URL: {image_url}")
         logger.info("Step 1: 이미지 → 텍스트 변환 시작")
         img2txt = ImageToText(app.state.blip_model, app.state.processor)
-        prompt, item_list  = img2txt.generate_text(image_url)
+        
+        caption  = img2txt.generate_text(image_url)
+        logger.info(f"Step 1 완료: 생성된 캡션 = {caption}")
+        if not caption:
+            raise ValueError("[Error] Caption is None.")
+        
+        logger.info("Step 1: GPT-4o 모델에 요청 시작")
+        generate_prompt_gpt = GPT_API(app.state.gpt_client)
+        prompt, item_list = generate_prompt_gpt.generate_prompt(caption)
         logger.info(f"Step 1 완료: 생성된 프롬프트 = {prompt}")
         logger.info(f"Step 1 완료: 생성된 상품 리스트 = {item_list}")
+        
+        
         logger.info("Step 2: 텍스트 → 이미지 생성 시작")
         txt2img = TextToImage(app.state.pipe)
         image = txt2img.generate_image(prompt)
@@ -94,7 +106,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
         clear_cache()
 
         print("[INFO] Step 3: 네이버 API로 추천 아이템 검색")
-        # item_list = ["mouse", "desk mat", "mechanical keyboard", "led lamp", "pot plant"]
+        
         naver = NaverAPI(item_list)
         products = naver.run()
         logger.info(f"Step 3 완료: 추천된 제품 개수 = {len(products)}")

@@ -2,7 +2,7 @@ from core.config import settings
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 import torch
-import os
+import os, openai
 
 import logging
 
@@ -20,6 +20,9 @@ def init_models(app):
 
     blip_model = blip_model.to("cuda", torch.float16)
     logger.info("BLIP 모델 로딩 완료")
+    
+    # OpenAI GPT 클라이언트 초기화
+    gpt_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
     # SDXL 불러오기
     pipe = StableDiffusionXLPipeline.from_single_file(
@@ -53,4 +56,6 @@ def init_models(app):
     app.state.blip_model = blip_model
     app.state.processor = processor
     app.state.pipe = pipe
+    app.state.gpt_client = gpt_client
+    
     logger.info("모델 초기화 완료")
