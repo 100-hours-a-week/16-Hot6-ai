@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import requests, os, threading
-from queue import Queue
 import logging
 from shutdown import shutdown_event
 from services.img2txt import ImageToText
@@ -15,10 +14,12 @@ from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
 from routers import healthcheck
+from routers import info
 
 app = FastAPI()
 # healthcheck
 app.include_router(healthcheck.router)
+app.include_router(info.router)
 
 logging.basicConfig(
     level=logging.INFO,

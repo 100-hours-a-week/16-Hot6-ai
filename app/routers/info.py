@@ -2,7 +2,6 @@ from fastapi import APIRouter, Request
 from datetime import datetime
 import torch
 import platform
-import subprocess
 
 router = APIRouter()
 
