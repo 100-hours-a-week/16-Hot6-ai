@@ -1,4 +1,4 @@
-import logging
+import logging, re, json
 from core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -8,46 +8,40 @@ class GPT_API:
         self.client = client
         
     def parse_gpt_output(self, text: str) -> tuple[str, list[str]]:
-            prompt = ""
-            items = []
+        """
+        Parse GPT JSON response safely, even if the string includes surrounding text or markdown code blocks.
+        """
+        try:
+            # ✨ Step 1: 추출 - 코드 블록이나 여분의 문자가 있을 수 있으므로 JSON 부분만 추출
+            json_text_match = re.search(r"\{.*\}", text, re.DOTALL)
+            if not json_text_match:
+                raise ValueError("JSON block not found in GPT response.")
 
-            try:
-                lines = text.strip().split("\n")
-                reading_prompt = False
-                reading_items = False
+            json_str = json_text_match.group(0)
 
-                for line in lines:
-                    if line.lower().startswith("prompt:"):
-                        prompt = line.split(":", 1)[1].strip()
-                        reading_prompt = True
-                        reading_items = False
-                    elif "recommended items" in line.lower():
-                        reading_items = True
-                        reading_prompt = False
-                    elif reading_prompt and prompt == "":
-                        prompt = line.strip()
-                    elif reading_items and line.strip().startswith(("-", "•")):
-                        items.append(line.strip("-• ").strip())
+            # ✨ Step 2: 로드 - JSON 파싱
+            parsed = json.loads(json_str)
 
-                if not prompt:
-                    raise ValueError("Prompt not found.")
-                if len(items) < 3:
-                    raise ValueError("Too few items extracted.")
+            prompt = parsed.get("prompt", "").strip()
+            items = parsed.get("recommended_items", [])
 
-                return prompt, items
-            except Exception as e:
-                logger.error(f"GPT 응답 파싱 실패: {e}")
-                logger.info(f"원본 GPT 응답:\n{text}")
-                
-                fallback_prompt = text.split("Prompt:")[-1].split("Recommended Items:")[0].strip() if "Prompt:" in text else ""
-                logger.info("기본 추천 키워드로 대체합니다.")
-                return fallback_prompt, [
-                    "mouse", 
-                    "desk mat", 
-                    "mechanical keyboard", 
-                    "LED desk lamp", 
-                    "potted plant"
-                ]
+            if not prompt:
+                raise ValueError("Prompt missing.")
+            if not isinstance(items, list) or len(items) < 3:
+                raise ValueError("Invalid recommended_items.")
+
+            return prompt, items
+
+        except Exception as e:
+            logger.error(f"[GPT 파싱 오류] {e}")
+            logger.info(f"[GPT 응답 원문]:\n{text}")
+            return "clean white desk with laptop", [
+                "desk lamp",
+                "monitor riser",
+                "potted plant",
+                "ceramic mug",
+                "notebook"
+            ]
 
     # Prompt 정리(불필요한 단어 제거)
     def clean_prompt(self, prompt: str) -> str:
@@ -82,7 +76,7 @@ class GPT_API:
                     ],
                     temperature=0.6,
                     max_tokens=300  # 🔼 추천: 70은 너무 작음 (prompt + list까지 포함 못함)
-                    )
+                    )      
         generate_prompt = response.choices[0].message.content
         cleaned_prompt, items = self.parse_gpt_output(generate_prompt)
         cleaned_prompt = self.clean_prompt(cleaned_prompt)
@@ -90,3 +84,6 @@ class GPT_API:
         logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
         logger.info(f"Step 1 완료: 생성된 상품 리스트 = {items}")
         return cleaned_prompt, items
+
+print(settings.SYSTEM_PROMPT)
+print(settings.USER_PROMPT)
