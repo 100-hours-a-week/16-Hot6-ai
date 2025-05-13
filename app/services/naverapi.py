@@ -1,8 +1,5 @@
-import os
 import re
 import requests
-from fastapi import FastAPI
-from pydantic import BaseModel
 from typing import List, Dict, Any
 from core.config import settings
 
