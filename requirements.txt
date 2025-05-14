@@ -1,42 +1,14 @@
-# PyTorch with CUDA 12.2 (호환: CUDA 12.4 드라이버 이상)
-torch==2.2.2
-torchvision==0.17.2
-torchaudio==2.2.2
-
-# Diffusion + Transformers ecosystem
-diffusers==0.27.2
-transformers==4.39.3
-xformers==0.0.25
-accelerate==0.27.2
+diffusers==0.25.0
+transformers==4.36.2
+xformers==0.0.22
+accelerate==0.24.1
 safetensors==0.4.2
-
-# TensorFlow CPU-only
-tensorflow-cpu==2.16.1
-
-# Core Python packages
-numpy
+tensorflow-cpu==2.15.0
 scipy
+numpy
 Pillow
 openai
 requests
-
-# API Server
-fastapi[all]==0.111.0
+fastapi[all]==0.110.1
 uvicorn[standard]==0.29.0
-
-
-# # 버전 24.04 버전에서 작동하는 패키지들
-# torch==2.1.2+cu121
-# torchvision==0.16.1+cu121
-# torchaudio==2.1.2+cu121
-# diffusers==0.25.0
-# transformers==4.36.2
-# xformers==0.0.23.post1
-# accelerate==0.24.1
-# safetensors==0.4.2
-# tensorflow-cpu==2.15.0
-# scipy
-# numpy
-# Pillow
-# openai
-# requests
+boto3
