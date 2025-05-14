@@ -1,4 +1,4 @@
-import os
+import os, torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
 # 원하는 저장 경로 (이 경로에 단일 파일로 저장됨)
@@ -38,7 +38,7 @@ os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
 print(f"[INFO] SDXL Base 모델 다운로드 및 저장 중... → {MODEL_SAVE_DIR}")
 pipe = StableDiffusionXLPipeline.from_pretrained(
     BASE_MODEL_ID,
-    torch_dtype="auto",
+    torch_dtype=torch.float16,
     variant="fp16",
     use_safetensors=True
 )
@@ -49,7 +49,7 @@ pipe.save_pretrained(MODEL_SAVE_DIR, safe_serialization=True, max_shard_size="10
 print(f"[INFO] VAE 모델 다운로드 및 저장 중... → {MODEL_SAVE_DIR}")
 vae = AutoencoderKL.from_pretrained(
     VAE_MODEL_ID,
-    torch_dtype="auto"
+    torch_dtype=torch.float16
 )
 vae.save_pretrained(MODEL_SAVE_DIR, safe_serialization=True, max_shard_size="10GB")
 
