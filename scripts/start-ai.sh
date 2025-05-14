@@ -6,9 +6,11 @@ APP_DIR="$PROJECT_DIR/app"
 VENV_DIR="$PROJECT_DIR/venv"
 APP_MODULE="main:app"
 PORT=8000
-LOG_FILE="$HOME/ai.log"
+LOG_DIR="/var/log/onthetop/ai"
+LOG_FILE="$LOG_DIR/ai.log"
 
 echo "▶️ [ai-server] Starting FastAPI (from app dir)"
+mkdir -p "$LOG_DIR"
 cd "$APP_DIR" || exit 1
 
 if [ ! -d "$VENV_DIR" ]; then
