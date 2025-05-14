@@ -21,37 +21,56 @@ del model
 
 # 3. txt2img 모델 로드
 # ai/models/model_load.py
-
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 
+# Base 저장 위치
+BASE_DIR = os.getcwd()
+MODEL_ROOT = os.path.join(BASE_DIR, "models", "fluently-xl")
+os.makedirs(MODEL_ROOT, exist_ok=True)
 
-# 🔧 저장할 위치: 실행 위치 기준 상대경로
-MODEL_SAVE_DIR = os.path.join(BASE_DIR, "models", "sdxl")
+# --------------------------
+# 1. Fluently XL 모델 저장
+# --------------------------
+MODEL_ID = "fluently/Fluently-XL-Final"
+MODEL_FILE = os.path.join(MODEL_ROOT, "fluently-xl.safetensors")
 
-# Hugging Face 모델 ID
-BASE_MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
-VAE_MODEL_ID = "madebyollin/sdxl-vae-fp16-fix"
-
-# 디렉토리 생성
-os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
-
-print(f"[INFO] SDXL Base 모델 다운로드 및 저장 중... → {MODEL_SAVE_DIR}")
+print(f"[INFO] Fluently XL 모델 다운로드 중... → {MODEL_ID}")
 pipe = StableDiffusionXLPipeline.from_pretrained(
-    BASE_MODEL_ID,
+    MODEL_ID,
     torch_dtype=torch.float16,
     variant="fp16",
     use_safetensors=True
 )
 
-# 모델 전체 저장 (config 포함)
-pipe.save_pretrained(MODEL_SAVE_DIR, safe_serialization=True, max_shard_size="10GB")
+print(f"[INFO] 모델 저장 중... → {MODEL_FILE}")
+pipe.save_pretrained(MODEL_ROOT, safe_serialization=True, max_shard_size="10GB")
 
-print(f"[INFO] VAE 모델 다운로드 및 저장 중... → {MODEL_SAVE_DIR}")
+# rename model file
+raw_model_path = os.path.join(MODEL_ROOT, "model.safetensors")
+if os.path.exists(raw_model_path):
+    os.rename(raw_model_path, MODEL_FILE)
+
+del pipe
+print(f"[✅ DONE] Fluently XL 저장 완료: {MODEL_FILE}")
+
+# --------------------------
+# 2. VAE 저장
+# --------------------------
+VAE_ID = "madebyollin/sdxl-vae-fp16-fix"
+VAE_DIR = os.path.join(MODEL_ROOT, "vae")
+VAE_FILE = os.path.join(VAE_DIR, "vae.safetensors")
+os.makedirs(VAE_DIR, exist_ok=True)
+
+print(f"[INFO] SDXL VAE 다운로드 중... → {VAE_ID}")
 vae = AutoencoderKL.from_pretrained(
-    VAE_MODEL_ID,
+    VAE_ID,
     torch_dtype=torch.float16
 )
-vae.save_pretrained(MODEL_SAVE_DIR, safe_serialization=True, max_shard_size="10GB")
+vae.save_pretrained(VAE_DIR, safe_serialization=True, max_shard_size="10GB")
 
-print(f"[✅ DONE] SDXL + VAE 저장 완료: {MODEL_SAVE_DIR}")
+raw_vae_path = os.path.join(VAE_DIR, "model.safetensors")
+if os.path.exists(raw_vae_path):
+    os.rename(raw_vae_path, VAE_FILE)
 
+del vae
+print(f"[✅ DONE] VAE 저장 완료: {VAE_FILE}")
