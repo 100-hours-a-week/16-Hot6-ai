@@ -1,3 +1,4 @@
+import os
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
 # 원하는 저장 경로 (이 경로에 단일 파일로 저장됨)
@@ -22,7 +23,7 @@ del model
 # ai/models/model_load.py
 
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
-import os
+
 
 # 🔧 저장할 위치: 실행 위치 기준 상대경로
 MODEL_SAVE_DIR = os.path.join(BASE_DIR, "models", "sdxl")
