@@ -38,7 +38,6 @@ print(f"[INFO] Fluently XL 모델 다운로드 중... → {MODEL_ID}")
 pipe = StableDiffusionXLPipeline.from_pretrained(
     MODEL_ID,
     torch_dtype=torch.float16,
-    variant="fp16",
     use_safetensors=True
 )
 
