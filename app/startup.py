@@ -30,23 +30,27 @@ def init_models(app):
         torch_dtype = torch.float16,
         use_safetensors = True
     ).to("cuda")
+    logger.info("SDXL 모델 로딩 완료")
 
     pipe.vae = AutoencoderKL.from_single_file(
         settings.VAE_PATH,
         torch_dtype = torch.float16
     ).to("cuda")
+    logger.info("VAE 모델 로딩 완료")
 
     pipe.load_lora_weights(
         settings.OTT_LORA_PATH,
         weight_name = os.path.basename(settings.OTT_LORA_PATH),
         adapter_name = "ott_lora"
     )
+    logger.info("LoRA 모델 로딩 완료_ott_lora")
 
     pipe.load_lora_weights(
         settings.LORA_3D_PATH,
         weight_name = os.path.basename(settings.LORA_3D_PATH),
         adapter_name = "d3_lora"
     )
+    logger.info("LoRA 모델 로딩 완료_d3_lora")
 
     pipe.set_adapters(["ott_lora", "d3_lora"], [0.7, 0.5])
     pipe.fuse_lora()
