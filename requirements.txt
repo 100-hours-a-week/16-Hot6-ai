@@ -1,13 +1,33 @@
-torch==2.1.2+cu121
-torchvision==0.16.1+cu121
-torchaudio==2.1.2+cu121
+# 버전 22.04 버전에서 작동하는 패키지들
+torch==2.1.2
+torchvision==0.16.1
+torchaudio==2.1.2
 diffusers==0.25.0
 transformers==4.36.2
 xformers==0.0.23.post1
 accelerate==0.24.1
 safetensors==0.4.2
+tensorflow-cpu==2.15.0
 scipy
 numpy
 Pillow
 openai
 requests
+
+
+
+# # 버전 24.04 버전에서 작동하는 패키지들
+# torch==2.1.2+cu121
+# torchvision==0.16.1+cu121
+# torchaudio==2.1.2+cu121
+# diffusers==0.25.0
+# transformers==4.36.2
+# xformers==0.0.23.post1
+# accelerate==0.24.1
+# safetensors==0.4.2
+# tensorflow-cpu==2.15.0
+# scipy
+# numpy
+# Pillow
+# openai
+# requests
