@@ -1,34 +1,45 @@
-# logging_config.py
 import logging
+from logging.config import dictConfig
 
-class ExcludeHealthcheck(logging.Filter):
+class SuppressHealthCheckFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        msg = record.getMessage()
-        return all(p not in msg for p in ("/health", "/healthz", "/readyz"))
+        return not (
+            "GET /health" in record.getMessage() or
+            "GET /ping" in record.getMessage()
+        )
 
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "filters": {
-        "exclude_health": {"()": ExcludeHealthcheck},
+        "suppress_healthcheck": {
+            "()": SuppressHealthCheckFilter
+        }
     },
     "formatters": {
         "default": {
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        },
+            "format": "%(asctime)s - %(levelname)s - %(message)s"
+        }
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "default",
-            "filters": ["exclude_health"],
-        },
+            "filters": ["suppress_healthcheck"]
+        }
     },
     "loggers": {
         "uvicorn.access": {
             "handlers": ["console"],
             "level": "INFO",
-            "propagate": False,
-        },
+            "propagate": False
+        }
     },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO"
+    }
 }
+
+def setup_logging():
+    dictConfig(LOGGING_CONFIG)
