@@ -10,7 +10,8 @@ from desk_classify import Desk_classifier
 from img2txt import ImageToText
 from txt2img import TextToImage
 from naverapi import NaverAPI
-
+from core.logging_config import setup_logging
+setup_logging()
 
 app = FastAPI()
 
