@@ -2,6 +2,8 @@ from core.config import settings
 # from transformers import BlipProcessor, BlipForConditionalGeneration
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
+from realesrgan.utils import RealESRGANer
+from basicsr.archs.rrdbnet_arch import RRDBNet
 import torch
 import os, openai
 
@@ -63,9 +65,24 @@ def init_models(app):
     pipe.fuse_lora()
     logger.info("모델 로딩 완료")
 
+    # Real-ESRGAN
+
+    esrgan = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64,num_block=23, num_grow_ch=32, scale=4)
+    
+    upscaler = RealESRGANer(
+        scale=4,
+        model_path="weights/RealESRGAN_x4plus.pth",
+        model=esrgan,
+        tile=512,
+        tile_pad=10,
+        pre_pad=0,
+        half=False
+    )
+
     app.state.processor = processor
     app.state.dino = dino
     app.state.pipe = pipe
     app.state.gpt_client = gpt_client
+    app.state.upscaler = upscaler
     
     logger.info("모델 초기화 완료")
