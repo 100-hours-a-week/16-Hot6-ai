@@ -3,13 +3,18 @@ from pydantic import BaseModel
 import requests, os, threading
 import logging
 from shutdown import shutdown_event
-from services.img2txt import ImageToText
-from services.txt2img import TextToImage
+# from services.img2txt import ImageToText
+# from services.txt2img import TextToImage
+from services.masking import Dino
+from services.generate_image import SDXL
 from services.naverapi import NaverAPI
 from services.backend_notify import notify_backend
 from utils.s3 import S3
 from utils.clear_cache import clear_cache
 from utils.queue_manager import task_queue
+from utils.upscaling import upscaling
+from utils.mapping import format_location_info_natural
+from utils.delete_image import delete_images
 from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
@@ -57,7 +62,7 @@ class ImageRequest(BaseModel):
 @app.post("/classify")
 async def classify_image(req: ImageRequest):
     image_url = req.initial_image_url
-    tmp_filename = "tmp.jpg"
+    tmp_filename = "/temp/tmp.png"
 
     with open(tmp_filename, "wb") as f:
         f.write(requests.get(image_url).content)
@@ -83,6 +88,34 @@ async def classify_image(req: ImageRequest):
     }
 
 # ===== 이미지 생성 파이프라인 =====
+def run_image_generate(image_url: str, tmp_filename: str):
+    masking = Dino(app.state.processor, app.state.dino)
+    
+    mask_path, label = masking.masking(tmp_filename)
+    
+    clear_cache()
+    # ==== Make Prompt ====
+    location_info = format_location_info_natural(label)
+    gpt = GPT_API()
+    prompt, naver_list, dino_labels = gpt.dummy(location_info)
+
+    naver = NaverAPI(naver_list)
+    products = naver.run()
+    # =====================
+    logger.info(f"{products}")
+    generate_image = SDXL(app.state.pipe)
+    generate_path = generate_image.generate_image(tmp_filename, mask_path, prompt)
+    clear_cache()
+    result_path = upscaling(app.state.upscaler, generate_path)
+    clear_cache()
+    s3 = S3()
+    generated_image_url = s3.save_s3(result_path)
+    clear_cache()
+    # notify_backend(image_url, generated_image_url, products)
+
+    delete_images()
+
+""""
 def run_image_generate(image_url: str, tmp_filename: str):
     try:
         img2txt = ImageToText(app.state.blip_model, app.state.processor)
@@ -116,4 +149,4 @@ def run_image_generate(image_url: str, tmp_filename: str):
 
         clear_cache()
         logger.info("VRAM cache 삭제 완료")
-        
+"""
