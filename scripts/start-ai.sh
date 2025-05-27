@@ -4,7 +4,7 @@ set -e
 PROJECT_DIR="/home/ubuntu/ai-server"
 APP_DIR="$PROJECT_DIR/app"
 # VENV_DIR="$PROJECT_DIR/venv"
-VENV_DIR="~/venv"
+VENV_DIR="/home/ubuntu/venv"
 APP_MODULE="main:app"
 PORT=8000
 LOG_DIR="/var/log/onthetop/ai"
