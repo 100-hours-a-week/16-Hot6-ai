@@ -92,3 +92,12 @@ class GPT_API:
         logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
         logger.info(f"Step 1 완료: 생성된 상품 리스트 = {items}")
         return cleaned_prompt, items
+    
+    def dummy(self, location_info):
+        if location_info:
+            logger.info(f"{location_info}")
+
+        prompt = "A sleek Tuesday workspace with a modern wooden desk lamp casting a warm glow, a geometric flowerpot holding a vibrant succulent, a stylish leather desk mat, a minimalistic clock displaying time, and an elegant glass water bottle. The setting exudes productivity and elegance, perfect for a focused work session."
+        naver_list = ['우드 데스크 램프', '기하학적 화분', '가죽 데스크 매트', '미니멀 시계', '유리 물병']
+        dino_labels = ['desk lamp', 'flowerpot', 'desk mat', 'clock', 'water bottle']
+        return prompt, naver_list, dino_labels
