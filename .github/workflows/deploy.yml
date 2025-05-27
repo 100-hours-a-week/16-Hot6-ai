@@ -10,7 +10,7 @@ jobs:
   deploy-dev:
     name: Deploy via Git Pull on Dev Server
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'main' || 'dev' }}
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
 
     steps:
       - name: Set up SSH config for jump server
