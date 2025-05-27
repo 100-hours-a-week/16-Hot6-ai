@@ -15,7 +15,7 @@ class Dino:
         self.text = "monitor. keyboard. mouse. laptop. speaker." # settings로 빼도 됨
 
     def masking(self, image_path):
-        image = Image.open(image_path)
+        image = Image.open(image_path).convert("RGB")
         inputs = self.processor(images=image, text=self.text, return_tensors="pt").to("cuda")
 
         with torch.no_grad():
