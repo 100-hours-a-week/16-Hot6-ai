@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
 import os
+import yaml
+from pathlib import Path
 
 load_dotenv()
 
@@ -26,9 +28,18 @@ class Settings:
     LORA_3D_PATH: str = os.getenv("3D_LORA_PATH", "")
 
     # 프롬프트 템플릿
-    SYSTEM_PROMPT: str = os.getenv("SYSTEM_PROMPT", "").replace("\\n", "\n")
-    USER_PROMPT: str =(os.getenv("USER_PROMPT", "").replace("\\n", "\n"))  # 사용자 프롬프트 템플릿
-    NEGATIVE_PROMPT: str = os.getenv("NEGATIVE_PROMPT", "")  # 부정 프롬프트 템플릿
+    PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"
+    with open(PROMP_CONFIG_PATH, "r", encoding="utf-8") as f:
+        PROMPT_CONFIG = yaml.safe_load(f)
+    
+    SYSTEM_PROMPT: str = PROMPT_CONFIG.get("system_prompt", "")
+    USER_PROMPT: str = PROMPT_CONFIG.get("user_prompt", "")
+    NEGATIVE_PROMPT: str = PROMPT_CONFIG.get("negative_prompt", "")
+    DINO_LABELS: list = PROMPT_CONFIG.get("dino_labels", [])
+    
+    # SYSTEM_PROMPT: str = os.getenv("SYSTEM_PROMPT", "").replace("\\n", "\n")
+    # USER_PROMPT: str =(os.getenv("USER_PROMPT", "").replace("\\n", "\n"))  # 사용자 프롬프트 템플릿
+    # NEGATIVE_PROMPT: str = os.getenv("NEGATIVE_PROMPT", "")  # 부정 프롬프트 템플릿
     
     # 기타 설정 / 추후 추가 필요
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
