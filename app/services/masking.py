@@ -1,64 +1,52 @@
-import torch
+import os
 import numpy as np
 import cv2
+import collections
 from PIL import Image
-from collections import defaultdict
 import logging
 
 logger = logging.getLogger(__name__)
 # from core.config import settings
 
-class Dino:
-    def __init__(self, processor, dino):
-        self.processor = processor
-        self.dino = dino
-        self.text = "monitor. keyboard. mouse. laptop. speaker." # settings로 빼도 됨
+def make_mask(masks, labels, output_path=None):
+    if output_path is None:
+        output_path = "/temp/mask.png"
+        
+    try:
+        output_dir = "/temp/masks"
+        os.makedirs(output_dir, exist_ok=True)
 
-    def masking(self, image_path):
-        image = Image.open(image_path).convert("RGB")
-        inputs = self.processor(images=image, text=self.text, return_tensors="pt").to("cuda")
+        label_count = collections.defaultdict(int)
+        merged_mask = np.full_like((masks[0] * 255).astype(np.uint8), 255)
 
-        with torch.no_grad():
-            outputs = self.dino(**inputs)
+        for mask, label in zip(masks, labels):
+            binary_mask = (mask * 255).astype(np.uint8)
+            contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            approx_contours = []
 
-        results = self.processor.post_process_grounded_object_detection(
-            outputs,
-            inputs.input_ids,
-            box_threshold=0.4,
-            text_threshold=0.3,
-            target_size=[image.size[::-1]]
-        )[0]
+            for cnt in contours:
+                epsilon = 0.005 * cv2.arcLength(cnt, True)
+                approx = cv2.approxPolyDP(cnt, epsilon, True)
+                approx_contours.append(approx)
 
-        boxes = results["boxes"].cpu().numpy().astype(int)
-        labels = results["labels"]
+            polygon_mask = np.zeros_like(binary_mask)
+            cv2.fillPoly(polygon_mask, approx_contours, color=255)
 
-        image_np = np.array(image)
-        h, w = image_np.shape[:2]
-        mask = np.zeros((h, w), dtype=np.uint8)
-        for box in boxes:
-            x1, y1, x2, y2 = box
-            mask[y1:y2, x1:x2] = 255
+            inverted_mask = 255 - polygon_mask
+            base_name = label.strip().replace(' ', '_')
+            count = label_count[base_name]
 
-        inverted_mask = 255 - mask
-        save_path = "/temp/mask.png"
-        cv2.imwrite(save_path, inverted_mask)
+            filename = f"{base_name}.png" if count == 0 else f"{base_name}_{count+1}.png"
+            label_count[base_name] += 1
+            save_path = os.path.join(output_dir, filename)
 
-        label_to_centers = defaultdict(list)
+            Image.fromarray(inverted_mask).save(save_path)
+            merged_mask = cv2.bitwise_and(merged_mask, inverted_mask)
 
-        for label, box in zip(labels, boxes):
-            x1, y1, x2, y2 = box
-            cx = int((x1 + x2) / 2)
-            cy = int((y1 + y2) / 2)
-            label_to_centers[label].append((cx, cy))
+        Image.fromarray(merged_mask).save(output_path)
+        logger.info(f"Generated Mask Image: {output_path}")
 
-        logger.info(f"masking 완료: {save_path}")
-        logger.info(f"masking data: {dict(label_to_centers)}")
-
-        del image
-        del image_np
-        del inputs
-        del outputs
-        del inverted_mask
-
-        return save_path, label_to_centers
-
+        return output_path
+    
+    except Exception as e:
+        logger.error(f"Generate Mask Image Failed: {e}")
