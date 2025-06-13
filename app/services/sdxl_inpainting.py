@@ -79,4 +79,4 @@ class SDXL:
 
             return save_path
         except Exception as e:
-            logger.info(f"sdxl_style is failed: {e}")
+            logger.error(f"sdxl_style is failed: {e}")
