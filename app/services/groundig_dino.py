@@ -79,4 +79,4 @@ class GroundingDINO:
 
             return label_to_centers
         except Exception as e:
-            logger.info(f"Labeling is failed: {e}")
+            logger.error(f"Labeling is failed: {e}")
