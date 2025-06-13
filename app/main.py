@@ -6,7 +6,7 @@ from shutdown import shutdown_event
 # from services.img2txt import ImageToText
 # from services.txt2img import TextToImage
 from services.masking import Dino
-from services.generate_image import SDXL
+from app.services.sdxl_inpainting import SDXL
 from services.naverapi import NaverAPI
 from services.backend_notify import notify_backend
 from utils.s3 import S3
