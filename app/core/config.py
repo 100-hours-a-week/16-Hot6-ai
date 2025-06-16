@@ -26,9 +26,11 @@ class Settings:
     VAE_PATH: str = os.getenv("VAE_PATH", "")
     OTT_LORA_PATH: str = os.getenv("OTT_LORA_PATH", "")
     LORA_3D_PATH: str = os.getenv("3D_LORA_PATH", "")
+    DINO_MODEL_PATH: str = "IDEA-Research/grounding-dino-base"
 
     # 프롬프트 템플릿
-    PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"
+    # PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"
+    PROMP_CONFIG_PATH = Path("/content/drive/MyDrive/lora_project/ott_file_folder/config.yaml")
     with open(PROMP_CONFIG_PATH, "r", encoding="utf-8") as f:
         PROMPT_CONFIG = yaml.safe_load(f)
     

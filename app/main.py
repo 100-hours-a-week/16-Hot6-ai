@@ -6,13 +6,10 @@ from shutdown import shutdown_event
 # from services.img2txt import ImageToText
 # from services.txt2img import TextToImage
 from services.groundig_dino import GroundingDINO
-from app.services.sdxl_inpainting import SDXL
-from services.sam import SAM
+from services.sdxl_inpainting import SDXL
 from services.naverapi import NaverAPI
 from services.backend_notify import notify_backend
-from services.masking import make_mask
 from utils.s3 import S3
-from utils.load_image import load_image
 from utils.clear_cache import clear_cache
 from utils.queue_manager import task_queue
 from utils.upscaling import upscaling
@@ -92,74 +89,31 @@ async def classify_image(req: ImageRequest):
 
 # ===== 이미지 생성 파이프라인 =====
 def run_image_generate(image_url: str, tmp_filename: str):
-    # Load Variable
-    gdino = GroundingDINO(app.state.processor, app.state.dino)
-    sam2 = SAM(app.state.sam2_predictor)
-    sdxl = SDXL(app.state.pipe)
-    gpt = GPT_API(app.state.gpt_client)
-    upscaler = app.state.upscaler
-    origin_image_path = load_image(image_url)
-    s3 = S3()
-
-    # Masking & Labeling
-    boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
-    location_info = format_location_info_natural(origin_image_label)
-    masks = sam2.run_sam(origin_image_path, boxes)
-    mask_image_path = make_mask(masks, labels)
-    delete_images(folder_path="/temp/masks/")
+    masking = GroundingDINO(app.state.processor, app.state.dino)
+    
+    mask_path, label = masking.masking(tmp_filename)
+    
     clear_cache()
+    # ==== Make Prompt ====
+    location_info = format_location_info_natural(label)
+    gpt = GPT_API()
+    prompt, naver_list, dino_labels = gpt.dummy(location_info)
 
-    # Make Prompt(Woody의 pipeline으로 생성 부탁드립니다.)
-    weekday_ko, date_str = get_today_korean() ## 일단 이부분은 사용하지 않는다고 했으니, 해결 부탁
-    generated_prompt = gpt(system_prompt_template, user_prompt_template, location_info, weekday_ko)
-    prompt, naver_list, dino_labels = parse_gpt_output(generated_prompt)
-
-    # Make Naver Shopping List
     naver = NaverAPI(naver_list)
     products = naver.run()
+    # =====================
+    logger.info(f"{products}")
+    generate_image = SDXL(app.state.pipe)
+    generate_path = generate_image.generate_image(tmp_filename, mask_path, prompt)
+    clear_cache()
+    result_path = upscaling(app.state.upscaler, generate_path)
+    clear_cache()
+    s3 = S3()
+    generated_image_url = s3.save_s3(result_path)
+    clear_cache()
+    # notify_backend(image_url, generated_image_url, products)
 
-    # Generate Image
-    sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt, weekday_ko)
-    label_to_centers = gdino.labeling(dino_labels, sdxl_image_path)
-    clear_cache()
-    style_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="", lora_weight="")
-    clear_cache()
-
-    # Image Upscaling
-    result_image_path = upscaling(upscaler, style_image_path)
-    clear_cache()
-
-    # Upload S3 & Send
-    generated_image_url = s3.save_s3(result_image_path)
-    notify_backend(image_url, generated_image_url, products)
-    clear_cache()
     delete_images()
-
-    # masking = Dino(app.state.processor, app.state.dino)
-    
-    # mask_path, label = masking.masking(tmp_filename)
-    
-    # clear_cache()
-    # # ==== Make Prompt ====
-    # location_info = format_location_info_natural(label)
-    # gpt = GPT_API()
-    # prompt, naver_list, dino_labels = gpt.dummy(location_info)
-
-    # naver = NaverAPI(naver_list)
-    # products = naver.run()
-    # # =====================
-    # logger.info(f"{products}")
-    # generate_image = SDXL(app.state.pipe)
-    # generate_path = generate_image.generate_image(tmp_filename, mask_path, prompt)
-    # clear_cache()
-    # result_path = upscaling(app.state.upscaler, generate_path)
-    # clear_cache()
-    # s3 = S3()
-    # generated_image_url = s3.save_s3(result_path)
-    # clear_cache()
-    # # notify_backend(image_url, generated_image_url, products)
-
-    # delete_images()
 
 """"
 def run_image_generate(image_url: str, tmp_filename: str):
