@@ -1,4 +1,5 @@
 from core.config import settings
+from utils.load_config_sam import hydra_config_context
 # from transformers import BlipProcessor, BlipForConditionalGeneration
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
@@ -34,10 +35,10 @@ def init_models(app):
     processor = AutoProcessor.from_pretrained(dino_model_path)
     dino = AutoModelForZeroShotObjectDetection.from_pretrained(dino_model_path).to("cuda")
     # SAM 2.1
-    sam2_checkpoint = settings.SAM2_CHECKPOINT_PATH
-    model_cfg = settings.SAM2_CONFIG_PATH
-    sam2_model = build_sam2(model_cfg, sam2_checkpoint, device="cuda")
-    sam2_predictor = SAM2ImagePredictor(sam2_model)
+    with hydra_config_context(settings.SAM2_CONFIG_PATH) as config_name:
+        sam2_checkpoint = settings.SAM2_CHECKPOINT_PATH
+        sam2_model = build_sam2(config_name, sam2_checkpoint, device="cuda")
+        sam2_predictor = SAM2ImagePredictor(sam2_model)
 
     # OpenAI GPT 클라이언트 초기화
     gpt_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -89,7 +90,7 @@ def init_models(app):
     
     upscaler = RealESRGANer(
         scale=4,
-        model_path="weights/RealESRGAN_x4plus.pth",
+        model_path=settings.UPSCALIER_PATH,
         model=esrgan,
         tile=512,
         tile_pad=10,

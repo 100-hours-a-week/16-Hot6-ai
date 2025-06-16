@@ -30,6 +30,7 @@ class Settings:
     DINO_MODEL_PATH: str = "IDEA-Research/grounding-dino-base"
     SAM2_CHECKPOINT_PATH: str = os.getenv("SAM2_CHECKPOINT_PATH", "")
     SAM2_CONFIG_PATH: str = os.getenv("SAM2_CONFIG_PATH", "")
+    UPSCALIER_PATH: str = os.getenv("UPSCALIER_PATH", "")
 
     # 프롬프트 템플릿
     # PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"

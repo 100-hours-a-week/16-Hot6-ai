@@ -6,7 +6,7 @@ from shutdown import shutdown_event
 # from services.img2txt import ImageToText
 # from services.txt2img import TextToImage
 from services.groundig_dino import GroundingDINO
-from app.services.sdxl_inpainting import SDXL
+from services.sdxl_inpainting import SDXL
 from services.sam import SAM
 from services.naverapi import NaverAPI
 from services.backend_notify import notify_backend
