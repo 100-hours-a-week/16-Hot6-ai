@@ -25,8 +25,11 @@ class Settings:
     BASE_MODEL_PATH: str = os.getenv("BASE_MODEL_PATH", "")
     VAE_PATH: str = os.getenv("VAE_PATH", "")
     OTT_LORA_PATH: str = os.getenv("OTT_LORA_PATH", "")
-    LORA_3D_PATH: str = os.getenv("3D_LORA_PATH", "")
+    STYLE_LORA_PATH: str = os.getenv("STYLE_LORA_PATH", "")
+    MSPAINT_LORA_PATH: str = os.getenv("MSPAINT_LORA_PATH", "")
     DINO_MODEL_PATH: str = "IDEA-Research/grounding-dino-base"
+    SAM2_CHECKPOINT_PATH: str = os.getenv("SAM2_CHECKPOINT_PATH", "")
+    SAM2_CONFIG_PATH: str = os.getenv("SAM2_CONFIG_PATH", "")
 
     # 프롬프트 템플릿
     # PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"

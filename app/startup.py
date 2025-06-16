@@ -34,8 +34,8 @@ def init_models(app):
     processor = AutoProcessor.from_pretrained(dino_model_path)
     dino = AutoModelForZeroShotObjectDetection.from_pretrained(dino_model_path).to("cuda")
     # SAM 2.1
-    sam2_checkpoint = ""
-    model_cfg = ""
+    sam2_checkpoint = settings.SAM2_CHECKPOINT_PATH
+    model_cfg = settings.SAM2_CONFIG_PATH
     sam2_model = build_sam2(model_cfg, sam2_checkpoint, device="cuda")
     sam2_predictor = SAM2ImagePredictor(sam2_model)
 
@@ -43,7 +43,7 @@ def init_models(app):
     gpt_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
     # SDXL inpainting
-    pipe = StableDiffusionXLPipeline.from_single_file(
+    pipe = StableDiffusionXLPipeline.from_pretrained(
         settings.BASE_MODEL_PATH, # 해당 경로만 inpainting model 경로로
         torch_dtype = torch.float16,
         use_safetensors = True
@@ -60,6 +60,17 @@ def init_models(app):
         adapter_name = "ott_lora"
     )
 
+    pipe.load_lora_weights(
+        settings.STYLE_LORA_PATH, # 해당 경로를 이번에 학습한 LoRA로
+        weight_name = os.path.basename(settings.STYLE_LORA_PATH),
+        adapter_name = "basic_lora"
+    )
+
+    pipe.load_lora_weights(
+        settings.OTT_LORA_PATH, # 해당 경로를 이번에 학습한 LoRA로
+        weight_name = os.path.basename(settings.OTT_LORA_PATH),
+        adapter_name = "mspaint_lora"
+    )
     """"
     pipe.load_lora_weights(
         settings.LORA_3D_PATH,
