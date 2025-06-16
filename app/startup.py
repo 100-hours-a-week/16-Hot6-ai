@@ -4,6 +4,8 @@ from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 from diffusers import StableDiffusionXLPipeline, AutoencoderKL
 from realesrgan.utils import RealESRGANer
 from basicsr.archs.rrdbnet_arch import RRDBNet
+from sam2.build_sam import build_sam2
+from sam2.sam2_image_predictor import SAM2ImagePredictor
 import torch
 import os, openai
 
@@ -31,6 +33,11 @@ def init_models(app):
 
     processor = AutoProcessor.from_pretrained(dino_model_path)
     dino = AutoModelForZeroShotObjectDetection.from_pretrained(dino_model_path).to("cuda")
+    # SAM 2.1
+    sam2_checkpoint = ""
+    model_cfg = ""
+    sam2_model = build_sam2(model_cfg, sam2_checkpoint, device="cuda")
+    sam2_predictor = SAM2ImagePredictor(sam2_model)
 
     # OpenAI GPT 클라이언트 초기화
     gpt_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -81,6 +88,7 @@ def init_models(app):
 
     app.state.processor = processor
     app.state.dino = dino
+    app.state.sam2_predictor = sam2_predictor
     app.state.pipe = pipe
     app.state.gpt_client = gpt_client
     app.state.upscaler = upscaler

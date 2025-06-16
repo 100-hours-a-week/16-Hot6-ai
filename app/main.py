@@ -7,6 +7,7 @@ from shutdown import shutdown_event
 # from services.txt2img import TextToImage
 from services.groundig_dino import GroundingDINO
 from app.services.sdxl_inpainting import SDXL
+from services.sam import SAM
 from services.naverapi import NaverAPI
 from services.backend_notify import notify_backend
 from services.masking import make_mask
@@ -93,6 +94,7 @@ async def classify_image(req: ImageRequest):
 def run_image_generate(image_url: str, tmp_filename: str):
     # Load Variable
     gdino = GroundingDINO(app.state.processor, app.state.dino)
+    sam2 = SAM(app.state.sam2_predictor)
     sdxl = SDXL(app.state.pipe)
     gpt = GPT_API(app.state.gpt_client)
     upscaler = app.state.upscaler
@@ -102,7 +104,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
     # Masking & Labeling
     boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
     location_info = format_location_info_natural(origin_image_label)
-    masks = run_sam(sam2_predictor, origin_image_path, boxes, labels)
+    masks = sam2.run_sam(origin_image_path, boxes)
     mask_image_path = make_mask(masks, labels)
     delete_images(folder_path="/temp/masks/")
     clear_cache()
