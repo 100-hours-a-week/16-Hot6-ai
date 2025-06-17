@@ -4,6 +4,7 @@ import numpy as np
 from collections import defaultdict
 from typing import Dict, List, Any
 import logging
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -83,17 +84,27 @@ class GroundingDINO:
             logger.error(f"Labeling is failed: {e}")
             
     def get_center_coords_by_dino_labels(self, products: List[Dict[str, any]], image_path: str) -> List[Dict[str, any]]:
-        labels = [p.get("dino_label") for p in products if p.get("dino_label")]
+        subcategory_to_dino_labels = settings.DINO_LABELS_KO_MAP
+        
+        # sub_category -> dino_labels 추출
+        labels = []
+        product_label_map = {}
+        for p in products:
+            sub = p.get("sub_category", "")
+            dino_label = subcategory_to_dino_labels.get(sub)
+            if dino_label:
+                labels.append(dino_label)
+                product_label_map[id(p)] = dino_label
+                
+        # Dino 모델로 중심 좌표 추출
         label_to_centers = self.labeling(labels, image_path)
         
+        # 각 product에 center 좌표 할당
         for p in products:
-            label = p.get("dino_label")
+            label = p.get("dino_label", "")
             coords = label_to_centers.get(label)
             if coords:
-                cx, cy = coords[0]
+                p["center_x"], p["center_y"] = coords[0]
             else:
-                cx, cy = 1, 1
-            p["center_x"] = cx
-            p["center_y"] = cy
-            p.pop("dino_label", None)
+                p["center_x"], p["center_y"] = None, None
         return products
