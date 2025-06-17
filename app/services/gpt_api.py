@@ -7,47 +7,64 @@ class GPT_API:
     def __init__(self, client):
         self.client = client
         
-    def parse_gpt_output(self, text: str) -> tuple[str, list[str]]:
+    def parse_gpt_output(self, text: str) -> tuple[str, list[str], list[str]]:
         prompt = ""
-        items = []
+        naver_items = []
+        dino_labels = []
+
         try:
             lines = text.strip().splitlines()
-            reading_items = False
+            current_section = None
 
             for line in lines:
-                line_lower = line.lower().strip()
+                line = line.strip()
 
-                # Prompt 라벨 감지
-                if line_lower.startswith("prompt:"):
-                    prompt = line.split(":", 1)[1].strip()
+                # 섹션 구분 감지
+                if line.lower().startswith("prompt:"):
+                    current_section = "prompt"
+                    continue
+                elif "naver shopping list" in line.lower():
+                    current_section = "naver"
+                    continue
+                elif "grounding dino labels" in line.lower():
+                    current_section = "dino"
                     continue
 
-                # Recommended Items 시작
-                if "recommended items" in line_lower:
-                    reading_items = True
-                    continue
+                # 내용 파싱
+                if current_section == "prompt" and prompt == "" and line:
+                    prompt = line
 
-                # 프롬프트가 Prompt 라벨 없이 바로 오는 경우
-                if not prompt and not reading_items and line.strip():
-                    prompt = line.strip()
+                elif current_section == "naver" and line.startswith(("-", "•")):
+                    item = line.lstrip("-• ").strip()
+                    if item:
+                        naver_items.append(item)
 
-                if reading_items and line.strip().startswith(("-", "•")):
-                    items.append(line.strip("-• ").strip())
+                elif current_section == "dino" and line.startswith(("-", "•")):
+                    item = line.lstrip("-• ").strip()
+                    if item:
+                        dino_labels.append(item)
 
+            # 최소 검증
             if not prompt:
                 raise ValueError("Prompt not found in GPT output.")
-            if len(items) < 3:
-                raise ValueError("Not enough items.")
+            if len(naver_items) < 3:
+                raise ValueError("Not enough Naver items.")
+            if len(dino_labels) < 1:
+                raise ValueError("No DINO labels found.")
 
-            return prompt, items
+            print(prompt)
+            print(naver_items)
 
+            return prompt, naver_items, dino_labels
+        
         except Exception as e:
             logger.error(f"GPT output parsing failed: {e}")
             logger.info(f"Raw GPT output:\n{text}")
-            return "clean white desk with laptop and monitor", [
-                "desk lamp", "monitor stand", "potted plant", "keyboard", "mug"
-            ]
-
+            return (
+                "clean white desk with laptop and monitor",
+                ["우드 데스크 램프", "모니터 받침대", "작은 화분", "무선 마우스", "머그컵"],
+                ["desk lamp", "monitor", "plant", "mouse", "cup"]
+        )
 
 
     # Prompt 정리(불필요한 단어 제거)
@@ -82,12 +99,12 @@ class GPT_API:
                     )      
         generated_prompt = response.choices[0].message.content
         logger.info(f"GPT-4o 응답: {generated_prompt}")
-        cleaned_prompt, items = self.parse_gpt_output(generated_prompt)
+        cleaned_prompt, items, dino_label = self.parse_gpt_output(generated_prompt)
         cleaned_prompt = self.clean_prompt(cleaned_prompt)
         
         logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
         logger.info(f"Step 1 완료: 생성된 상품 리스트 = {items}")
-        return cleaned_prompt, items
+        return cleaned_prompt, items, dino_label
     
     def dummy(self, location_info):
         if location_info:
