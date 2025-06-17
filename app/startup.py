@@ -2,7 +2,7 @@ from core.config import settings
 from utils.load_config_sam import hydra_config_context
 # from transformers import BlipProcessor, BlipForConditionalGeneration
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
-from diffusers import StableDiffusionXLPipeline, AutoencoderKL
+from diffusers import DiffusionPipeline, AutoencoderKL
 from realesrgan.utils import RealESRGANer
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from sam2.build_sam import build_sam2
@@ -42,7 +42,7 @@ def init_models(app):
     gpt_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
     # SDXL inpainting
-    pipe = StableDiffusionXLPipeline.from_pretrained(
+    pipe = DiffusionPipeline.from_pretrained(
         settings.BASE_MODEL_PATH, # 해당 경로만 inpainting model 경로로
         torch_dtype = torch.float16,
         use_safetensors = True
