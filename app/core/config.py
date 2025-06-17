@@ -34,7 +34,7 @@ class Settings:
 
     # 프롬프트 템플릿
     # PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"
-    PROMP_CONFIG_PATH = Path("/content/drive/MyDrive/lora_project/ott_file_folder/config.yaml")
+    PROMP_CONFIG_PATH = Path("/content/16-Hot6-ai/config.yaml")
     with open(PROMP_CONFIG_PATH, "r", encoding="utf-8") as f:
         PROMPT_CONFIG = yaml.safe_load(f)
     

@@ -24,7 +24,7 @@ class SDXL:
             generator = torch.Generator(device = "cuda").manual_seed(random.randint(0, 100000))
 
             self.pipe.set_adapters(["ott_lora"], [1.0])
-            self.pipe.fuse_lora()
+            #self.pipe.fuse_lora()
             
             result = self.pipe(
                 prompt = prompt,
@@ -62,7 +62,7 @@ class SDXL:
             negative_prompt = settings.NEGATIVE_PROMPT
 
             self.pipe.set_adapters([f"{lora_name}"], [{lora_weight}])
-            self.pipe.fuse_lora()
+            #self.pipe.fuse_lora()
 
             result = self.pipe(
                 prompt = "desk setup. keep the layout and objects the same, just change the art style to a semi-realistic 3D render.",
