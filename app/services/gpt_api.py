@@ -80,7 +80,7 @@ class GPT_API:
                 prompt = prompt.replace(word, "")
         return prompt.strip()
 
-    def generate_prompt(self, system_prompt_template: str, user_prompt_template: str, location_info: str) -> tuple[str, list[str]]:
+    def generate_prompt(self, system_prompt_template: str, user_prompt_template: str, location_info: str) -> str:
         """
         Generate a styled prompt and recommended items based on the given caption.
         """
@@ -99,12 +99,12 @@ class GPT_API:
                     )      
         generated_prompt = response.choices[0].message.content
         logger.info(f"GPT-4o 응답: {generated_prompt}")
-        cleaned_prompt, items, dino_label = self.parse_gpt_output(generated_prompt)
-        cleaned_prompt = self.clean_prompt(cleaned_prompt)
+        # cleaned_prompt, items, dino_label = self.parse_gpt_output(generated_prompt)
+        # cleaned_prompt = self.clean_prompt(cleaned_prompt)
         
-        logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
-        logger.info(f"Step 1 완료: 생성된 상품 리스트 = {items}")
-        return cleaned_prompt, items, dino_label
+        # logger.info(f"Step 1 완료: 생성된 프롬프트 = {cleaned_prompt}")
+        # logger.info(f"Step 1 완료: 생성된 상품 리스트 = {items}")
+        return generated_prompt
     
     def dummy(self, location_info):
         if location_info:
