@@ -65,7 +65,7 @@ class ImageRequest(BaseModel):
 @app.post("/classify")
 async def classify_image(req: ImageRequest):
     image_url = req.initial_image_url
-    os.makedirs("/content/temp")
+    os.makedirs("/content/temp", exist_ok=True)
     tmp_filename = "/content/temp/tmp.png"
 
     with open(tmp_filename, "wb") as f:
