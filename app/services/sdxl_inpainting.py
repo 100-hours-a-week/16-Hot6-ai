@@ -61,7 +61,7 @@ class SDXL:
 
             negative_prompt = settings.NEGATIVE_PROMPT
 
-            self.pipe.set_adapters([f"{lora_name}"], [{lora_weight}])
+            self.pipe.set_adapters([f"{lora_name}"], [lora_weight])
             #self.pipe.fuse_lora()
 
             result = self.pipe(
