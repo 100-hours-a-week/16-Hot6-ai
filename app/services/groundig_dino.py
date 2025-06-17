@@ -2,6 +2,7 @@ import torch
 from PIL import Image
 import numpy as np
 from collections import defaultdict
+from typing import Dict, List, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -80,3 +81,19 @@ class GroundingDINO:
             return label_to_centers
         except Exception as e:
             logger.error(f"Labeling is failed: {e}")
+            
+    def get_center_coords_by_dino_labels(self, products: List[Dict[str, any]], image_path: str) -> List[Dict[str, any]]:
+        labels = [p.get("dino_label") for p in products if p.get("dino_label")]
+        label_to_centers = self.labeling(labels, image_path)
+        
+        for p in products:
+            label = p.get("dino_label")
+            coords = label_to_centers.get(label)
+            if coords:
+                cx, cy = coords[0]
+            else:
+                cx, cy = 1, 1
+            p["center_x"] = cx
+            p["center_y"] = cy
+            p.pop("dino_label", None)
+        return products

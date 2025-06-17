@@ -107,22 +107,28 @@ def run_image_generate(image_url: str, tmp_filename: str):
     location_info = format_location_info_natural(origin_image_label)
     masks = sam2.run_sam(origin_image_path, boxes)
     mask_image_path = make_mask(masks, labels)
-    delete_images(folder_path="/temp/masks/")
+    delete_images(folder_path="/content/temp/masks/")
+    # delete_images(folder_path="/temp/masks/")     # prod 전환 시
     clear_cache()
 
     # Make Prompt(Woody의 pipeline으로 생성 부탁드립니다.)
-    weekday_ko, date_str = get_today_korean() ## 일단 이부분은 사용하지 않는다고 했으니, 해결 부탁
-    generated_prompt = gpt(system_prompt_template, user_prompt_template, location_info, weekday_ko)
-    prompt, naver_list, dino_labels = parse_gpt_output(generated_prompt)
+    # weekday_ko, date_str = get_today_korean() ## 일단 이부분은 사용하지 않는다고 했으니, 해결 부탁
+    generated_prompt = gpt.generate_prompt(settings.SYSTEM_PROMPT, settings.USER_PROMPT, location_info)
+    prompt, naver_list, dino_labels = gpt.parse_gpt_output(generated_prompt)
 
     # Make Naver Shopping List
     naver = NaverAPI(naver_list)
     products = naver.run()
 
     # Generate Image
-    sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt, weekday_ko)
-    label_to_centers = gdino.labeling(dino_labels, sdxl_image_path)
+    sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt)
+    label_to_centers = gdino.get_center_coords_by_dino_labels(products, sdxl_image_path)
     clear_cache()
+    
+    # naver api (좌표 붙이는 함수 설계)
+    #######
+    # def # product가 들어와서 좌표까지 붙어서 나가야된다
+    #######
     style_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="basic_lora", lora_weight=2.0)
     clear_cache()
 

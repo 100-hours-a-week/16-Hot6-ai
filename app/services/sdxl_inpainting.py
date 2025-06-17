@@ -11,10 +11,10 @@ class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
 
-    def sdxl_inpainting(self, origin_image, mask_image, prompt, weekday_ko, prompt_2: str = None, negative_prompt: str = None):
+    def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
         try:
             if negative_prompt is None:
-                negative_prompt = f"{settings.NEGATIVE_PROMPT}, {settings.weekday_neg2[weekday_ko]}, photorealistic, realistic texture"
+                negative_prompt = f"{settings.NEGATIVE_PROMPT}, photorealistic, realistic texture"
 
             if prompt_2 is None:
                 prompt_2 = "ott_style, cinematic"

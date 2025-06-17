@@ -63,26 +63,22 @@ class GPT_API:
                 prompt = prompt.replace(word, "")
         return prompt.strip()
 
-    def generate_prompt(self, caption: str) -> tuple[str, list[str]]:
+    def generate_prompt(self, system_prompt_template: str, user_prompt_template: str, location_info: str) -> tuple[str, list[str]]:
         """
         Generate a styled prompt and recommended items based on the given caption.
         """
-        # GPT-4o 모델에 요청 보내기
+        system_prompt = system_prompt_template.format(dino_label_string=settings.DINO_LABELS)
         
+        user_prompt = user_prompt_template.format(location_info=location_info)
+        # GPT-4o 모델에 요청 보내기
         response = self.client.chat.completions.create(
                     model = "gpt-4o",
                     messages = [
-                        {
-                            "role": "system",
-                            "content": (settings.SYSTEM_PROMPT)
-                        },
-                        {
-                            "role": "user",
-                            "content": (settings.USER_PROMPT.format(caption=caption))
-                        }
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
                     ],
-                    temperature=0.6,
-                    max_tokens=300  # 🔼 추천: 70은 너무 작음 (prompt + list까지 포함 못함)
+                    temperature=0.55,
+                    max_tokens=500  # 🔼 추천: 70은 너무 작음 (prompt + list까지 포함 못함)
                     )      
         generated_prompt = response.choices[0].message.content
         logger.info(f"GPT-4o 응답: {generated_prompt}")
