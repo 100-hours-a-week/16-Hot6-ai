@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 
 def make_mask(masks, labels, output_path=None):
     if output_path is None:
-        output_path = "/temp/mask.png"
+        output_path = "/content/temp/mask.png"
         
     try:
-        output_dir = "/temp/masks"
+        output_dir = "/content/temp/masks"
         os.makedirs(output_dir, exist_ok=True)
 
         label_count = collections.defaultdict(int)

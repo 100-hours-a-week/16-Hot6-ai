@@ -23,6 +23,9 @@ class SDXL:
             mask = Image.open(mask_image).convert("L")
             generator = torch.Generator(device = "cuda").manual_seed(random.randint(0, 100000))
 
+            self.pipe.set_adapters(["ott_lora"], [1.0])
+            self.pipe.fuse_lora()
+            
             result = self.pipe(
                 prompt = prompt,
                 prompt_2 = prompt_2,
@@ -35,7 +38,7 @@ class SDXL:
                 generator=generator,
             ).images[0]
 
-            save_path = "/temp/result.png"
+            save_path = "/content/temp/result.png"
             result.save(save_path)
 
             logger.info(f"Generated Image: {save_path}")
@@ -59,6 +62,7 @@ class SDXL:
             negative_prompt = settings.NEGATIVE_PROMPT
 
             self.pipe.set_adapters([f"{lora_name}"], [{lora_weight}])
+            self.pipe.fuse_lora()
 
             result = self.pipe(
                 prompt = "desk setup. keep the layout and objects the same, just change the art style to a semi-realistic 3D render.",
@@ -72,7 +76,7 @@ class SDXL:
                 generator=generator
             ).images[0]
 
-            save_path = "/temp/style.png"
+            save_path = "/content/temp/style.png"
             result.save(save_path)
 
             logger.info(f"Style Changed: {save_path}")

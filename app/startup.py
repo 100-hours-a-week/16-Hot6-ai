@@ -77,11 +77,6 @@ def init_models(app):
         adapter_name = "d3_lora"
     )
     """
-
-    pipe.set_adapters(["ott_lora"], [1.0])
-    pipe.fuse_lora()
-    logger.info("모델 로딩 완료")
-
     # Real-ESRGAN
 
     esrgan = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64,num_block=23, num_grow_ch=32, scale=4)
@@ -103,4 +98,4 @@ def init_models(app):
     app.state.gpt_client = gpt_client
     app.state.upscaler = upscaler
     
-    logger.info("모델 초기화 완료")
+    logger.info("Model Initialized and Loaded to GPU")
