@@ -10,7 +10,7 @@ def upscaling(upscaler, image_path):
 
     output, _ = upscaler.enhance(img_np, outscale = 1)
 
-    save_path = "/temp/upscaled.png"
+    save_path = "/content/temp/upscaled.png"
     Image.fromarray(output).save(save_path)
 
 
