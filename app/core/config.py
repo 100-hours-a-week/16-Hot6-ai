@@ -42,7 +42,6 @@ class Settings:
     USER_PROMPT: str = PROMPT_CONFIG.get("user_prompt_template", "")
     NEGATIVE_PROMPT: str = PROMPT_CONFIG.get("negative_base", "")
     DINO_LABELS: list = PROMPT_CONFIG.get("dino_labels", [])
-    DINO_LABELS_KO_MAP: dict = PROMPT_CONFIG.get("label_mapping", {})
     
     # SYSTEM_PROMPT: str = os.getenv("SYSTEM_PROMPT", "").replace("\\n", "\n")
     # USER_PROMPT: str =(os.getenv("USER_PROMPT", "").replace("\\n", "\n"))  # 사용자 프롬프트 템플릿

@@ -1,4 +1,4 @@
-import re, requests, logging, random
+import re, requests, logging
 from functools import lru_cache
 from collections import OrderedDict, defaultdict
 from typing import List, Dict, Any
@@ -33,26 +33,13 @@ class NaverAPI:
     
     @staticmethod
     def extract_product_code(url: str) -> str:
-        # 1. smartstore URL
-        match = re.search(r"/products/(\d+)", url)
-        if match:
-            return match.group(1)
-
-        # 2. catalog 형식
-        match = re.search(r"/catalog/(\d+)", url)
-        if match:
-            return match.group(1)
-
-        # 3. id= 형식 (드물게 있음)
-        match = re.search(r"id=(\d+)", url)
-        if match:
-            return match.group(1)
-
+        for pattern in [r"/products/(\d+)", r"/catalog/(\d+)", r"id=(\d+)"]:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
         return "xxxxx"
 
-    @lru_cache(maxsize=128)
     def _fetch(self, query: str, display: int) -> List[Dict[str, Any]]:
-        """네이버 쇼핑 API 실제 호출 (결과 캐싱)"""
         headers = {
             "X-Naver-Client-Id":     self.client_id,
             "X-Naver-Client-Secret": self.client_secret
@@ -74,7 +61,7 @@ class NaverAPI:
             price = int(prod.get("lprice", 0))
             main_cat, sub_cat = self._extract_categories(prod)
 
-            results.append({
+            result = {
                 "name":           title,
                 "price":          price,
                 "purchase_place": mall,
@@ -85,7 +72,12 @@ class NaverAPI:
                 "center_x":       None,
                 "center_y":       None,
                 "product_code":   self.extract_product_code(prod.get("link", ""))
-            })
+            }
+
+            if self.run_only_naver and not self.is_valid_naver_url(result["purchase_url"]):
+                continue
+            results.append(result)
+
         return results
 
     def _extract_categories(self, item: Dict[str, Any]) -> (str, str):
@@ -100,38 +92,14 @@ class NaverAPI:
         return "", c2
 
     def search_item(self, query: str, display: int = None) -> List[Dict[str, Any]]:
-        """
-        단일 쿼리 검색 + 페일오버(재시도) 로직
-        - 결과가 display 개수보다 적으면, "<query> 소품" 으로 보강 검색
-        """
         disp = display or self.DEFAULT_DISPLAY
         results = self._fetch(query, disp)
-
         if len(results) < disp:
             needed = disp - len(results)
             fallback_q = f"{query}{self.FALLBACK_SUFFIX}"
             logger.info(f"[NaverAPI] fallback retry for '{query}' as '{fallback_q}'")
             results += self._fetch(fallback_q, needed)
-
         return results
-
-    def aggregate_results(
-        self,
-        products: List[Dict[str, Any]],
-        max_items: int = 5
-    ) -> List[Dict[str, Any]]:
-        """
-        전체 상품 리스트 중복 제거 및 상위 max_items 개만 남김
-        - 상품명(name) 기준으로 최초 등장 순으로 dedupe
-        """
-        seen = OrderedDict()
-        for prod in products:
-            if prod["name"] not in seen:
-                seen[prod["name"]] = prod
-            if len(seen) >= max_items:
-                break
-        return list(seen.values())
-
 
     @staticmethod
     def is_valid_naver_url(url: str) -> bool:
@@ -139,48 +107,36 @@ class NaverAPI:
             "smartstore.naver.com",
             "search.shopping.naver.com/catalog/"
         ])
+    
+    def run_with_coords(self, products_with_coords: List[Dict[str, Any]], per_keyword: int = 3) -> List[Dict[str, Any]]:
+        """
+        products_with_coords: [{"name_ko": ..., "dino_label": ..., "center_x": ..., "center_y": ...}, ...]
+        → 각 keyword에 대해 네이버 검색 후 가장 적합한 상품 N개 반환 (좌표 포함)
+        """
+        final_results = []
 
+        for product in products_with_coords:
+            query = product.get("name_ko")
+            center_x = product.get("center_x")
+            center_y = product.get("center_y")
+            dino_label = product.get("dino_label")
 
-    def run(self, total: int = 5, per_prefix: int = 1) -> List[Dict[str, Any]]:
-        all_prods = []
-        prefixes = self.PREFIXES[self.category]
+            if not query:
+                logger.warning(f"[NaverAPI] Missing keyword for product: {product}")
+                continue
 
-        for q in self.build_queries():
-            batch = self.search_item(q, self.DEFAULT_DISPLAY)
-            for p in batch:
-                p["_prefix"] = q.split()[0]
-            all_prods.extend(batch)
+            results = self.search_item(query, display=10)
+            if not results:
+                logger.warning(f"[NaverAPI] No result found for keyword: {query}")
+                continue
 
-        # ✅ 네이버 쇼핑만 필터링 (옵션 기반)
-        if self.run_only_naver:
-            filtered_prods = [p for p in all_prods if self.is_valid_naver_url(p["purchase_url"])]
-        else:
-            filtered_prods = all_prods
+            valid_results = [r for r in results if self.is_valid_naver_url(r["purchase_url"])]
+            for item in valid_results[:per_keyword]:
+                item["center_x"] = center_x
+                item["center_y"] = center_y
+                item["dino_label"] = dino_label
+                item["name"] = item.get("name", query)
+                item["product_code"] = self.extract_product_code(item.get("purchase_url", ""))
+                final_results.append(item)
 
-        # sub_category별 1개씩
-        by_sub = defaultdict(list)
-        for p in filtered_prods:
-            by_sub[p["sub_category"]].append(p)
-        selected = [random.choice(lst) for lst in by_sub.values() if lst]
-
-        # prefix별로 per_prefix 개씩
-        by_pref = defaultdict(list)
-        for p in filtered_prods:
-            by_pref[p["_prefix"]].append(p)
-        for pref in prefixes:
-            pool = [p for p in by_pref[pref] if p not in selected]
-            selected += random.sample(pool, min(per_prefix, len(pool)))
-
-        # ✅ 부족할 경우
-        if not self.run_only_naver:
-            remaining = [p for p in all_prods if p not in selected]
-            need = total - len(selected)
-            if need > 0 and remaining:
-                selected += random.sample(remaining, min(need, len(remaining)))
-
-        # 정리
-        for p in selected:
-            p.pop("_prefix", None)
-        random.shuffle(selected)
-
-        return selected
+        return final_results
