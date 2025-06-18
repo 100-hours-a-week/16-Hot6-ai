@@ -38,9 +38,9 @@ class Settings:
     with open(PROMP_CONFIG_PATH, "r", encoding="utf-8") as f:
         PROMPT_CONFIG = yaml.safe_load(f)
     
-    SYSTEM_PROMPT: str = PROMPT_CONFIG.get("system_prompt", "")
-    USER_PROMPT: str = PROMPT_CONFIG.get("user_prompt", "")
-    NEGATIVE_PROMPT: str = PROMPT_CONFIG.get("negative_prompt", "")
+    SYSTEM_PROMPT: str = PROMPT_CONFIG.get("system_prompt_template", "")
+    USER_PROMPT: str = PROMPT_CONFIG.get("user_prompt_template", "")
+    NEGATIVE_PROMPT: str = PROMPT_CONFIG.get("negative_base", "")
     DINO_LABELS: list = PROMPT_CONFIG.get("dino_labels", [])
     DINO_LABELS_KO_MAP: dict = PROMPT_CONFIG.get("label_mapping", {})
     
