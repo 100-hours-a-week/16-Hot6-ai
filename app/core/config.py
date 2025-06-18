@@ -27,14 +27,14 @@ class Settings:
     OTT_LORA_PATH: str = os.getenv("OTT_LORA_PATH", "")
     STYLE_LORA_PATH: str = os.getenv("STYLE_LORA_PATH", "")
     MSPAINT_LORA_PATH: str = os.getenv("MSPAINT_LORA_PATH", "")
-    DINO_MODEL_PATH: str = "IDEA-Research/grounding-dino-base"
+    DINO_MODEL_PATH: str = os.getenv("DINO_MODEL_PATH", "")
     SAM2_CHECKPOINT_PATH: str = os.getenv("SAM2_CHECKPOINT_PATH", "")
     SAM2_CONFIG_PATH: str = os.getenv("SAM2_CONFIG_PATH", "")
     UPSCALIER_PATH: str = os.getenv("UPSCALIER_PATH", "")
 
     # 프롬프트 템플릿
-    # PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"
-    PROMP_CONFIG_PATH = Path("/content/16-Hot6-ai/config.yaml")
+    PROMP_CONFIG_PATH = Path(__file__).parent / "config.yaml"
+    # PROMP_CONFIG_PATH = Path("/content/16-Hot6-ai/config.yaml")
     with open(PROMP_CONFIG_PATH, "r", encoding="utf-8") as f:
         PROMPT_CONFIG = yaml.safe_load(f)
     
