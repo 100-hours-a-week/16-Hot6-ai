@@ -82,9 +82,7 @@ async def classify_image(req: ImageRequest):
             "classify": "false"
         }
 
-    # 작업 큐에 넣고 순차 처리
     task_queue.put((image_url, tmp_filename))
-    #print("[DEBUG] Queue 처리, MVP이후 번호 넣을 수 있으면 넣어보기")
 
     return {
         "initial_image_url": image_url,
@@ -108,11 +106,9 @@ def run_image_generate(image_url: str, tmp_filename: str):
     masks = sam2.run_sam(origin_image_path, boxes)
     mask_image_path = make_mask(masks, labels)
     delete_images(folder_path="/content/temp/masks/")
-    # delete_images(folder_path="/temp/masks/")     # prod 전환 시
     clear_cache()
 
-    # Make Prompt(Woody의 pipeline으로 생성 부탁드립니다.)
-    # weekday_ko, date_str = get_today_korean() ## 일단 이부분은 사용하지 않는다고 했으니, 해결 부탁
+    # Make Prompt
     generated_prompt = gpt.generate_prompt(settings.SYSTEM_PROMPT, settings.USER_PROMPT, location_info)
     prompt, naver_list, dino_labels = gpt.parse_gpt_output(generated_prompt)
 
@@ -141,66 +137,3 @@ def run_image_generate(image_url: str, tmp_filename: str):
     notify_backend(image_url, generated_image_url, products)
     clear_cache()
     delete_images()
-
-# def run_image_generate(image_url: str, tmp_filename: str):
-#     masking = GroundingDINO(app.state.processor, app.state.dino)
-    
-#     mask_path, label = masking.masking(tmp_filename)
-    
-#     clear_cache()
-#     # ==== Make Prompt ====
-#     location_info = format_location_info_natural(label)
-#     gpt = GPT_API()
-#     prompt, naver_list, dino_labels = gpt.dummy(location_info)
-
-#     naver = NaverAPI(naver_list)
-#     products = naver.run()
-#     # =====================
-#     logger.info(f"{products}")
-#     generate_image = SDXL(app.state.pipe)
-#     generate_path = generate_image.generate_image(tmp_filename, mask_path, prompt)
-#     clear_cache()
-#     result_path = upscaling(app.state.upscaler, generate_path)
-#     clear_cache()
-#     s3 = S3()
-#     generated_image_url = s3.save_s3(result_path)
-#     clear_cache()
-#     # notify_backend(image_url, generated_image_url, products)
-
-#     delete_images()
-
-""""
-def run_image_generate(image_url: str, tmp_filename: str):
-    try:
-        img2txt = ImageToText(app.state.blip_model, app.state.processor)
-        caption  = img2txt.generate_text(image_url)
-        if not caption:
-            raise ValueError("[Error] Caption is None.")
-        
-        generate_prompt_gpt = GPT_API(app.state.gpt_client)
-        prompt, item_list = generate_prompt_gpt.generate_prompt(caption)
-        clear_cache()
-        
-        txt2img = TextToImage(app.state.pipe)
-        image = txt2img.generate_image(prompt)
-        s3 = S3()
-        generated_image_url = s3.save_s3(image)
-        clear_cache()
-
-        naver = NaverAPI(item_list)
-        products = naver.run()
-
-        notify_backend(image_url, generated_image_url, products)
-
-    except Exception as e:
-        logger.error(f"Exception during image generate pipeline: {e}")
-        notify_backend(image_url)
-
-    finally:
-        if os.path.exists(tmp_filename):
-            os.remove(tmp_filename)
-            logger.info("임시 파일 삭제 완료")
-
-        clear_cache()
-        logger.info("VRAM cache 삭제 완료")
-"""

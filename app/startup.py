@@ -43,7 +43,7 @@ def init_models(app):
 
     # SDXL inpainting
     pipe = DiffusionPipeline.from_pretrained(
-        settings.BASE_MODEL_PATH, # 해당 경로만 inpainting model 경로로
+        settings.BASE_MODEL_PATH,
         torch_dtype = torch.float16,
         use_safetensors = True
     ).to("cuda")
@@ -54,19 +54,19 @@ def init_models(app):
     ).to("cuda")
 
     pipe.load_lora_weights(
-        settings.OTT_LORA_PATH, # 해당 경로를 이번에 학습한 LoRA로
+        settings.OTT_LORA_PATH,
         weight_name = os.path.basename(settings.OTT_LORA_PATH),
         adapter_name = "ott_lora"
     )
 
     pipe.load_lora_weights(
-        settings.STYLE_LORA_PATH, # 해당 경로를 이번에 학습한 LoRA로
+        settings.STYLE_LORA_PATH,
         weight_name = os.path.basename(settings.STYLE_LORA_PATH),
         adapter_name = "basic_lora"
     )
 
     pipe.load_lora_weights(
-        settings.OTT_LORA_PATH, # 해당 경로를 이번에 학습한 LoRA로
+        settings.OTT_LORA_PATH,
         weight_name = os.path.basename(settings.OTT_LORA_PATH),
         adapter_name = "mspaint_lora"
     )
