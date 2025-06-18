@@ -62,8 +62,8 @@ class GroundingDINO:
             results = self.processor.post_process_grounded_object_detection(
                 outputs,
                 inputs.input_ids,
-                box_threshold=0.4,
-                text_threshold=0.3,
+                box_threshold=0.3,
+                text_threshold=0.2,
                 target_sizes=[image.size[::-1]]
             )[0]
 
@@ -83,28 +83,30 @@ class GroundingDINO:
         except Exception as e:
             logger.error(f"Labeling is failed: {e}")
             
-    def get_center_coords_by_dino_labels(self, products: List[Dict[str, any]], image_path: str) -> List[Dict[str, any]]:
-        subcategory_to_dino_labels = settings.DINO_LABELS_KO_MAP
-        
-        # sub_category -> dino_labels 추출
-        labels = []
-        product_label_map = {}
+    def get_center_coords_by_dino_labels(self, 
+        products: List[Dict[str, Any]], image_path: str, save_path: str) -> List[Dict[str, Any]]:
+        # dino_label이 포함된 product만 필터링
+        labels = [p["dino_label"] for p in products if "dino_label" in p and p["dino_label"]]
+
+        if not labels:
+            logging.warning("[DINO] 유효한 라벨이 없어 좌표 검출을 건너뜁니다.")
+            return products
+
+        # 라벨 좌표 매핑
+        label_to_centers = self.labeling(
+            processor=self.processor,
+            dino=self.dino,
+            dino_labels=labels,
+            image_path=image_path
+        )
+
+        # 각 상품에 center 좌표 할당
         for p in products:
-            sub = p.get("sub_category", "")
-            dino_label = subcategory_to_dino_labels.get(sub)
-            if dino_label:
-                labels.append(dino_label)
-                product_label_map[id(p)] = dino_label
-                
-        # Dino 모델로 중심 좌표 추출
-        label_to_centers = self.labeling(labels, image_path)
-        
-        # 각 product에 center 좌표 할당
-        for p in products:
-            label = p.get("dino_label", "")
+            label = p.get("dino_label")
             coords = label_to_centers.get(label)
             if coords:
-                p["center_x"], p["center_y"] = coords[0]
+                p["center_x"], p["center_y"] = coords.pop(0)
             else:
                 p["center_x"], p["center_y"] = None, None
+
         return products

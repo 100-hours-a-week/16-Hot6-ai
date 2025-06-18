@@ -110,17 +110,18 @@ def run_image_generate(image_url: str, tmp_filename: str):
 
     # Make Prompt
     generated_prompt = gpt.generate_prompt(settings.SYSTEM_PROMPT, settings.USER_PROMPT, location_info)
-    prompt, naver_list, dino_labels = gpt.parse_gpt_output(generated_prompt)
+    prompt, naver_pairs = gpt.parse_gpt_output(generated_prompt)
 
     # Make Naver Shopping List
-    naver = NaverAPI(naver_list)
-    products = naver.run()
+    
 
     # Generate Image
     sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt)
-    label_to_centers = gdino.get_center_coords_by_dino_labels(products, sdxl_image_path)
+    products = gdino.get_center_coords_by_dino_labels(naver_pairs, sdxl_image_path)
     clear_cache()
     
+    naver = NaverAPI(raw_items=[], category="decor")
+    products = naver.run_with_coords(products)
     # naver api (좌표 붙이는 함수 설계)
     #######
     # def # product가 들어와서 좌표까지 붙어서 나가야된다
