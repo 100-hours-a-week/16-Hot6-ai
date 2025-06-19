@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 def delete_images(folder_path = None):
     if folder_path is None:
-        folder_path = "/content/temp/"
+        folder_path = "./content/temp/"
 
     if not os.path.exists(folder_path):
         logger.info(f"{folder_path} is not exists")
