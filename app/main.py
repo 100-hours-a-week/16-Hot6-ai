@@ -65,8 +65,8 @@ class ImageRequest(BaseModel):
 @app.post("/classify")
 async def classify_image(req: ImageRequest):
     image_url = req.initial_image_url
-    os.makedirs("/content/temp", exist_ok=True)
-    tmp_filename = "/content/temp/tmp.png"
+    os.makedirs("./content/temp", exist_ok=True)
+    tmp_filename = "./content/temp/tmp.png"
 
     with open(tmp_filename, "wb") as f:
         f.write(requests.get(image_url).content)
@@ -105,7 +105,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
     location_info = format_location_info_natural(origin_image_label)
     masks = sam2.run_sam(origin_image_path, boxes)
     mask_image_path = make_mask(masks, labels)
-    delete_images(folder_path="/content/temp/masks/")
+    delete_images(folder_path="./content/temp/masks/")
     clear_cache()
 
     # Make Prompt
