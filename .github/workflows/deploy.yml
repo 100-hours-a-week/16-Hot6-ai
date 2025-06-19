@@ -48,7 +48,7 @@ jobs:
             cd ~/ai-server
             git fetch origin
             git reset --hard origin/${BRANCH}
-            git clean -fdx -e venv/ -e .env
+            git clean -fdx -e venv/ -e .env -e config.yaml
             # sudo systemctl daemon-reload
             # sudo systemctl restart ai.service
       
