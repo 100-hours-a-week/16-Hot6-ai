@@ -38,7 +38,7 @@ class SDXL:
                 generator=generator,
             ).images[0]
 
-            save_path = "/content/temp/result.png"
+            save_path = "./content/temp/result.png"
             result.save(save_path)
 
             logger.info(f"Generated Image: {save_path}")
@@ -76,7 +76,7 @@ class SDXL:
                 generator=generator
             ).images[0]
 
-            save_path = "/content/temp/style.png"
+            save_path = "./content/temp/style.png"
             result.save(save_path)
 
             logger.info(f"Style Changed: {save_path}")
