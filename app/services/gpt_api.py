@@ -7,7 +7,65 @@ class GPT_API:
     def __init__(self, client):
         self.client = client
         
-    def parse_gpt_output(self, text: str) -> tuple[str, list[str], list[str]]:
+    # def parse_gpt_output(self, text: str) -> tuple[str, list[str]]:
+    #     prompt = ""
+    #     naver_items = []
+    #     dino_labels = []
+
+    #     try:
+    #         lines = text.strip().splitlines()
+    #         current_section = None
+
+    #         for line in lines:
+    #             line = line.strip()
+
+    #             # 섹션 구분 감지
+    #             if line.lower().startswith("prompt:"):
+    #                 current_section = "prompt"
+    #                 continue
+    #             elif "naver shopping list" in line.lower():
+    #                 current_section = "naver"
+    #                 continue
+    #             elif "grounding dino labels" in line.lower():
+    #                 current_section = "dino"
+    #                 continue
+
+    #             # 내용 파싱
+    #             if current_section == "prompt" and prompt == "" and line:
+    #                 prompt = line
+
+    #             elif current_section == "naver" and line.startswith(("-", "•")):
+    #                 item = line.lstrip("-• ").strip()
+    #                 if item:
+    #                     naver_items.append(item)
+
+    #             elif current_section == "dino" and line.startswith(("-", "•")):
+    #                 item = line.lstrip("-• ").strip()
+    #                 if item:
+    #                     dino_labels.append(item)
+
+    #         # 최소 검증
+    #         if not prompt:
+    #             raise ValueError("Prompt not found in GPT output.")
+    #         if len(naver_items) < 3:
+    #             raise ValueError("Not enough Naver items.")
+    #         if len(dino_labels) < 1:
+    #             raise ValueError("No DINO labels found.")
+
+    #         print(prompt)
+    #         print(naver_items)
+
+    #         return prompt, naver_items
+        
+    #     except Exception as e:
+    #         logger.error(f"GPT output parsing failed: {e}")
+    #         logger.info(f"Raw GPT output:\n{text}")
+    #         return (
+    #             "clean white desk with laptop and monitor",
+    #             ["우드 데스크 램프", "모니터 받침대", "작은 화분", "무선 마우스", "머그컵"],
+    #             ["desk lamp", "monitor", "plant", "mouse", "cup"]
+    #     )
+    def parse_gpt_output(self, text: str) -> tuple[str, list[dict]]:
         prompt = ""
         naver_items = []
         dino_labels = []
@@ -19,7 +77,6 @@ class GPT_API:
             for line in lines:
                 line = line.strip()
 
-                # 섹션 구분 감지
                 if line.lower().startswith("prompt:"):
                     current_section = "prompt"
                     continue
@@ -30,21 +87,13 @@ class GPT_API:
                     current_section = "dino"
                     continue
 
-                # 내용 파싱
-                if current_section == "prompt" and prompt == "" and line:
+                if current_section == "prompt" and not prompt and line:
                     prompt = line
-
                 elif current_section == "naver" and line.startswith(("-", "•")):
-                    item = line.lstrip("-• ").strip()
-                    if item:
-                        naver_items.append(item)
-
+                    naver_items.append(line.lstrip("-• ").strip())
                 elif current_section == "dino" and line.startswith(("-", "•")):
-                    item = line.lstrip("-• ").strip()
-                    if item:
-                        dino_labels.append(item)
+                    dino_labels.append(line.lstrip("-• ").strip())
 
-            # 최소 검증
             if not prompt:
                 raise ValueError("Prompt not found in GPT output.")
             if len(naver_items) < 3:
@@ -52,20 +101,28 @@ class GPT_API:
             if len(dino_labels) < 1:
                 raise ValueError("No DINO labels found.")
 
-            print(prompt)
-            print(naver_items)
+            pairs = []
+            for i in range(min(len(naver_items), len(dino_labels))):
+                pairs.append({
+                    "name_ko": naver_items[i],
+                    "dino_label": dino_labels[i]
+                })
 
-            return prompt, naver_items, dino_labels
-        
+            return prompt, pairs
+
         except Exception as e:
             logger.error(f"GPT output parsing failed: {e}")
             logger.info(f"Raw GPT output:\n{text}")
             return (
                 "clean white desk with laptop and monitor",
-                ["우드 데스크 램프", "모니터 받침대", "작은 화분", "무선 마우스", "머그컵"],
-                ["desk lamp", "monitor", "plant", "mouse", "cup"]
-        )
-
+                [
+                    {"name_ko": "우드 데스크 램프", "dino_label": "desk lamp"},
+                    {"name_ko": "모니터 받침대", "dino_label": "monitor"},
+                    {"name_ko": "작은 화분", "dino_label": "plant"},
+                    {"name_ko": "무선 마우스", "dino_label": "mouse"},
+                    {"name_ko": "머그컵",       "dino_label": "cup"},
+                ]
+            )
 
     # Prompt 정리(불필요한 단어 제거)
     def clean_prompt(self, prompt: str) -> str:

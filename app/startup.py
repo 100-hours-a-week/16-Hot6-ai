@@ -65,10 +65,11 @@ def init_models(app):
     )
 
     pipe.load_lora_weights(
-        settings.OTT_LORA_PATH,
-        weight_name = os.path.basename(settings.OTT_LORA_PATH),
+        settings.MSPAINT_LORA_PATH,
+        weight_name = os.path.basename(settings.MSPAINT_LORA_PATH),
         adapter_name = "mspaint_lora"
     )
+    
     """"
     pipe.load_lora_weights(
         settings.LORA_3D_PATH,
