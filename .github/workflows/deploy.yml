@@ -49,18 +49,18 @@ jobs:
             git fetch origin
             git reset --hard origin/${BRANCH}
             git clean -fdx -e venv/ -e .env
-            sudo systemctl daemon-reload
-            sudo systemctl restart ai.service
+            # sudo systemctl daemon-reload
+            # sudo systemctl restart ai.service
       
-            echo "⏳ Waiting 10 seconds for ai.service to stabilize..."
-            sleep 10
+            # echo "⏳ Waiting 10 seconds for ai.service to stabilize..."
+            # sleep 10
       
-            echo "📋 Checking status of ai.service..."
-            if systemctl is-active --quiet ai.service; then
-              echo "✅ ai.service is running successfully."
-            else
-              echo "❌ ai.service failed to start."
-              systemctl status ai.service
-              exit 1
-            fi
+            # echo "📋 Checking status of ai.service..."
+            # if systemctl is-active --quiet ai.service; then
+            #   echo "✅ ai.service is running successfully."
+            # else
+            #   echo "❌ ai.service failed to start."
+            #   systemctl status ai.service
+            #   exit 1
+            # fi
           EOF
