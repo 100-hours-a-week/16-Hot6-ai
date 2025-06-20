@@ -17,13 +17,13 @@ class SDXL:
                 negative_prompt = f"{settings.NEGATIVE_PROMPT}, photorealistic, realistic texture"
 
             if prompt_2 is None:
-                prompt_2 = "ott_style, cinematic"
+                prompt_2 = "ottstyle, cinematic"
             
             image = Image.open(origin_image).convert("RGB")
             mask = Image.open(mask_image).convert("L")
             generator = torch.Generator(device = "cuda").manual_seed(random.randint(0, 100000))
 
-            self.pipe.set_adapters(["ott_lora"], [1.0])
+            self.pipe.set_adapters(["basic_lora"], [1.0])
             #self.pipe.fuse_lora()
             
             result = self.pipe(

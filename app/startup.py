@@ -53,12 +53,6 @@ def init_models(app):
     ).to("cuda")
 
     pipe.load_lora_weights(
-        settings.OTT_LORA_PATH,
-        weight_name = os.path.basename(settings.OTT_LORA_PATH),
-        adapter_name = "ott_lora"
-    )
-
-    pipe.load_lora_weights(
         settings.STYLE_LORA_PATH,
         weight_name = os.path.basename(settings.STYLE_LORA_PATH),
         adapter_name = "basic_lora"

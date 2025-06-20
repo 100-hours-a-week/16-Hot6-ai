@@ -122,11 +122,11 @@ def run_image_generate(image_url: str, tmp_filename: str):
     naver = NaverAPI(raw_items=[], category="decor")
     products = naver.run_with_coords(products)
     
-    style_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="basic_lora", lora_weight=2.0)
-    clear_cache()
+    #style_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="basic_lora", lora_weight=2.0)
+    #clear_cache()
 
     # Image Upscaling
-    result_image_path = upscaling(upscaler, style_image_path)
+    result_image_path = upscaling(upscaler, sdxl_image_path)
     clear_cache()
 
     # Upload S3 & Send
