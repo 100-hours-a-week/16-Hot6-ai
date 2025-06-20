@@ -1,5 +1,4 @@
 from core.config import settings
-from utils.load_config_sam import hydra_config_context
 # from transformers import BlipProcessor, BlipForConditionalGeneration
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 from diffusers import DiffusionPipeline, AutoencoderKL

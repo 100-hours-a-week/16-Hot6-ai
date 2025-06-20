@@ -27,7 +27,7 @@ class Settings:
     OTT_LORA_PATH: str = os.getenv("OTT_LORA_PATH", "")
     STYLE_LORA_PATH: str = os.getenv("STYLE_LORA_PATH", "")
     MSPAINT_LORA_PATH: str = os.getenv("MSPAINT_LORA_PATH", "")
-    DINO_MODEL_PATH: str = "IDEA-Research/grounding-dino-base"
+    DINO_MODEL_PATH: str = os.getenv("DINO_MODEL_PATH", "")
     SAM2_CHECKPOINT_PATH: str = os.getenv("SAM2_CHECKPOINT_PATH", "")
     SAM2_CONFIG_PATH: str = os.getenv("SAM2_CONFIG_PATH", "")
     UPSCALIER_PATH: str = os.getenv("UPSCALIER_PATH", "")
