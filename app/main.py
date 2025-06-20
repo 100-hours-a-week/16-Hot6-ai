@@ -61,7 +61,7 @@ def image_worker():
 # ===== FastAPI 요청 모델 =====
 class ImageRequest(BaseModel):
     initial_image_url: str
-    content: str
+    concept: str
 
 @app.post("/classify")
 async def classify_image(req: ImageRequest):
