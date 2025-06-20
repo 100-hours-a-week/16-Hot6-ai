@@ -48,29 +48,25 @@ class SDXL:
         except Exception as e:
             logger.error(f"SDXL_Inpating is failed: {e}")
 
-    def sdxl_style(self, image_path, concept :str = None, lora_weight :float = None):
+    def sdxl_style(self, image_path, lora_name :str = None, lora_weight :float = None):
         try:
-            if concept is None:
-                concept = "basic_lora"
+            if lora_name is None:
+                lora_name = "basic_lora"
             if lora_weight is None:
                 lora_weight = 2.0
 
-            #### config LoRA 이름 넣어주기.
-            #### lora load 해주기(2025.06.20) 추가해주기.
-            
-            
             image = Image.open(image_path).convert("RGB")
             mask_image = Image.fromarray(np.ones((image.height, image.width), dtype=np.uint8) * 255)
             generator = torch.Generator(device="cuda").manual_seed(random.randint(0, 100000))
 
             negative_prompt = settings.NEGATIVE_PROMPT
 
-            self.pipe.set_adapters([f"{concept}"], [lora_weight])
+            self.pipe.set_adapters([f"{lora_name}"], [lora_weight])
             #self.pipe.fuse_lora()
 
             result = self.pipe(
                 prompt = "desk setup. keep the layout and objects the same, just change the art style to a semi-realistic 3D render.",
-                prompt_2 = f"{concept}, concept art, high detail",
+                prompt_2 = f"{lora_name}, concept art, high detail",
                 negative_prompt = negative_prompt,
                 image = image,
                 mask_image = mask_image,
@@ -82,7 +78,7 @@ class SDXL:
 
             save_path = "./content/temp/style.png"
             result.save(save_path)
-            #### lora unload(delete) 해주기(2025.06.20)
+
             logger.info(f"Style Changed: {save_path}")
 
             return save_path

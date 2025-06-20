@@ -61,6 +61,7 @@ def image_worker():
 # ===== FastAPI 요청 모델 =====
 class ImageRequest(BaseModel):
     initial_image_url: str
+    content: str
 
 @app.post("/classify")
 async def classify_image(req: ImageRequest):
@@ -112,8 +113,6 @@ def run_image_generate(image_url: str, tmp_filename: str):
     generated_prompt = gpt.generate_prompt(settings.SYSTEM_PROMPT, settings.USER_PROMPT, location_info)
     prompt, naver_pairs = gpt.parse_gpt_output(generated_prompt)
 
-    # Make Naver Shopping List
-    
 
     # Generate Image
     sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt)
@@ -122,10 +121,7 @@ def run_image_generate(image_url: str, tmp_filename: str):
     
     naver = NaverAPI(raw_items=[], category="decor")
     products = naver.run_with_coords(products)
-    # naver api (좌표 붙이는 함수 설계)
-    #######
-    # def # product가 들어와서 좌표까지 붙어서 나가야된다
-    #######
+    
     style_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="basic_lora", lora_weight=2.0)
     clear_cache()
 
