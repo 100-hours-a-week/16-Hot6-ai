@@ -134,7 +134,6 @@ class NaverAPI:
             for item in valid_results[:per_keyword]:
                 item["center_x"] = center_x
                 item["center_y"] = center_y
-                item["dino_label"] = dino_label
                 item["name"] = item.get("name", query)
                 item["product_code"] = self.extract_product_code(item.get("purchase_url", ""))
                 final_results.append(item)
