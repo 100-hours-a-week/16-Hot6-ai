@@ -113,7 +113,7 @@ class SDXL:
             # self.pipe.set_adapters(["BASIC"],[1.0])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
-            self.pipe.delete_adapters(CONFIG["adapter_name"])
+            self.pipe.unload_lora_weights()
             gc.collect()
             torch.cuda.empty_cache()
             
@@ -125,12 +125,12 @@ class SDXL:
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
 
-            # self.pipe.load_lora_weights(
-            #     settings.OTT_LORA_PATH,
-            #     torch_dtype=torch.float16,
-            #     weight_name = "BASIC",
-            #     adapter_name = "BASIC"
-            # )
+            self.pipe.load_lora_weights(
+                settings.OTT_LORA_PATH,
+                torch_dtype=torch.float16,
+                weight_name = "BASIC",
+                adapter_name = "BASIC"
+            )
             del image, mask_image, result, generator
             clear_cache()
             return save_path
