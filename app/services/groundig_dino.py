@@ -84,7 +84,7 @@ class GroundingDINO:
             logger.error(f"Labeling is failed: {e}")
             
     def get_center_coords_by_dino_labels(self, 
-        products: List[Dict[str, Any]], image_path: str, save_path: str) -> List[Dict[str, Any]]:
+        products: List[Dict[str, Any]], image_path: str) -> List[Dict[str, Any]]:
         # dino_label이 포함된 product만 필터링
         labels = [p["dino_label"] for p in products if "dino_label" in p and p["dino_label"]]
 
