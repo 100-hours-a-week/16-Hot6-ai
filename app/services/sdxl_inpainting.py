@@ -108,24 +108,22 @@ class SDXL:
             ).images[0]
 
             #### lora unload(delete) 해주기
-            self.pipe.unload_lora_weights()
-            # self.pipe.delete_adapters(CONFIG["adapter_name"])
+            # self.pipe.unload_lora_weights()
+            self.pipe.delete_adapters(CONFIG["adapter_name"])
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
-            
-            self.pipe.to("cpu")
             result.save(save_path)
             logger.info(f"Style Changed: {save_path}")
             end_time = time.time()
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
-            self.pipe.to("cuda")
-            self.pipe.load_lora_weights(
-                settings.OTT_LORA_PATH,
-                torch_dtype=torch.float16,
-                weight_name = "BASIC",
-                adapter_name = "BASIC"
-            )
+
+            # self.pipe.load_lora_weights(
+            #     settings.OTT_LORA_PATH,
+            #     torch_dtype=torch.float16,
+            #     weight_name = "BASIC",
+            #     adapter_name = "BASIC"
+            # )
             del image, mask_image, result, generator
             return save_path
         except Exception as e:
