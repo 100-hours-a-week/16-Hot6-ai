@@ -94,9 +94,7 @@ class GroundingDINO:
 
         # 라벨 좌표 매핑
         label_to_centers = self.labeling(
-            processor=self.processor,
-            dino=self.dino,
-            dino_labels=labels,
+            labels=labels,
             image_path=image_path
         )
 
