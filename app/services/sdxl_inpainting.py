@@ -13,27 +13,35 @@ class SDXL:
         self.pipe = pipe
         
 
-    # def free_all_loras(self):
-    #     if not hasattr(self.pipe, "adapters"):
-    #         return  # LoRA가 한번도 성공적으로 로드되지 않음
+    def flush_all_loras(self):
+        """
+        1) disable_lora()           : LoRA 효과 끄기
+        2) unload_lora_weights()    : 어댑터 레지스트리 제거
+        3) lora_layers.clear()      : 실제 weight 텐서 참조 해제
+        4) gc + empty_cache()       : 파이썬·CUDA 캐시 반환
+        """
+        # ─────────────────────────── 1. 적용 끄기
+        if hasattr(self.pipe, "disable_lora"):
+            self.pipe.disable_lora()
 
-    #     self.pipe.disable_lora()
+        # ─────────────────────────── 2. 레지스트리 비우기
+        if hasattr(self.pipe, "unload_lora_weights"):
+            self.pipe.unload_lora_weights()   # 모든 LoRA 이름 사라짐
 
-    #     for name in list(self.pipe.adapters["unet"]):
-    #         self.pipe.delete_adapters(name)
-    #     for m in ["unet", "text_encoder", "text_encoder_2"]:
-    #         mod = getattr(self.pipe, m, None)
-    #         if mod is not None and hasattr(mod, "lora_layers"):
-    #             mod.lora_layers.clear()
+        # ─────────────────────────── 3. 텐서 참조 해제
+        for module_name in ("unet", "text_encoder", "text_encoder_2"):
+            mod = getattr(self.pipe, module_name, None)
+            if mod is not None and hasattr(mod, "lora_layers"):
+                mod.lora_layers.clear()  # GPU·RAM 텐서 객체 해제
 
-    #     gc.collect()
-    #     torch.cuda.empty_cache()
+        # ─────────────────────────── 4. 캐시 반환
+        gc.collect()
+        torch.cuda.empty_cache()
 
-    #     # 4️⃣ 로깅
-    #     alloc = torch.cuda.memory_allocated() / 1024**2
-    #     resv  = torch.cuda.memory_reserved()  / 1024**2
-    #     logger.info(f"🧹 모든 LoRA 언로드 완료  ‖  VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
-# ─────────────────────────────────────────────────────────────
+        alloc = torch.cuda.memory_allocated() / 1024**2
+        resv  = torch.cuda.memory_reserved()  / 1024**2
+        logger.info(f"🧹 LoRA 완전 언로드 | VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
+    
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
         try:
@@ -116,9 +124,9 @@ class SDXL:
             # self.pipe.set_adapters(["BASIC"],[1.0])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             # self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
-            
-            self.pipe.disable_lora()
-            self.pipe.unload_lora_weights()
+            self.flush_all_loras()
+            # self.pipe.disable_lora()
+            # self.pipe.unload_lora_weights()
             # 3) lora_layers.clear()
             for m in (self.pipe.unet,
                     getattr(self.pipe,"text_encoder",None),
@@ -132,8 +140,6 @@ class SDXL:
             end_time = time.time()
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
-            logger.info("alloc :", torch.cuda.memory_allocated() / 1024**2, "MB")
-            logger.info("reserved :", torch.cuda.memory_reserved() / 1024**2, "MB")
             
             self.pipe.load_lora_weights(
                 settings.OTT_LORA_PATH,
