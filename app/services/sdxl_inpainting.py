@@ -132,7 +132,9 @@ class SDXL:
             end_time = time.time()
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
-
+            logger.info("alloc :", torch.cuda.memory_allocated() / 1024**2, "MB")
+            logger.info("reserved :", torch.cuda.memory_reserved() / 1024**2, "MB")
+            
             self.pipe.load_lora_weights(
                 settings.OTT_LORA_PATH,
                 torch_dtype=torch.float16,
