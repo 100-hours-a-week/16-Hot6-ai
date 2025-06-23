@@ -11,25 +11,30 @@ logger = logging.getLogger(__name__)
 class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
+        
+    
     
     def free_all_loras(self):
-        """
-        diffusers 0.33 전용 –  LoRA VRAM 확실히 반환
-        """
-        # 1) 전체 LoRA 비활성화
-        self.pipe.disable_lora()                      # base 모델만 남도록
+        if not hasattr(self.pipe, "adapters"):
+            return  # LoRA가 한번도 성공적으로 로드되지 않음
 
-        # 2) adapter·tensor 완전 삭제
+        self.pipe.disable_lora()
+
         for name in list(self.pipe.adapters["unet"]):
-            self.pipe.delete_adapters(name)           # UNet-/TextEncoder-/TextEncoder2 dict 전부 제거
+            self.pipe.delete_adapters(name)
         for m in ["unet", "text_encoder", "text_encoder_2"]:
             mod = getattr(self.pipe, m, None)
-            if hasattr(mod, "lora_layers"):
-                mod.lora_layers.clear()          # tensor 객체도 참조 해제
+            if mod is not None and hasattr(mod, "lora_layers"):
+                mod.lora_layers.clear()
 
-        # 3) 파이썬 & PyTorch GC
         gc.collect()
         torch.cuda.empty_cache()
+
+        # 4️⃣ 로깅
+        alloc = torch.cuda.memory_allocated() / 1024**2
+        resv  = torch.cuda.memory_reserved()  / 1024**2
+        logger.info(f"🧹 모든 LoRA 언로드 완료  ‖  VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
+# ─────────────────────────────────────────────────────────────
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
         try:
