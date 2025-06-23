@@ -81,12 +81,12 @@ class SDXL:
             logger.info(f"Load lora: {CONFIG['adapter_name']} with weight: {lora_weight}")
             
             # LoRA Load
-            # self.pipe.load_lora_weights(
-            #     CONFIG["lora_path"],
-            #     torch_dtype=torch.float16,
-            #     weight_name = CONFIG["adapter_name"],
-            #     adapter_name = CONFIG["adapter_name"]
-            # )
+            self.pipe.load_lora_weights(
+                CONFIG["lora_path"],
+                torch_dtype=torch.float16,
+                weight_name = CONFIG["adapter_name"],
+                adapter_name = CONFIG["adapter_name"]
+            )
             middle_time = time.time()
             logger.info(f"LoRA Load Time: {middle_time - start_time:.2f} seconds")
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
@@ -110,7 +110,9 @@ class SDXL:
 
             #### lora unload(delete) 해주기
             # self.pipe.unload_lora_weights()
-            # self.pipe.delete_adapters(CONFIG["adapter_name"])
+            self.pipe.set_adapters([],[])
+            self.pipe.delete_adapters(CONFIG["adapter_name"])
+            
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
             result.save(save_path)
