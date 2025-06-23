@@ -81,7 +81,7 @@ class SDXL:
                 image = image,
                 mask_image = mask_image,
                 guidance_scale = 9.0,
-                num_inference_steps=40,
+                num_inference_steps=20,
                 strength=0.95,
                 generator=generator
             ).images[0]
