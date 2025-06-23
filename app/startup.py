@@ -51,7 +51,7 @@ def init_models(app):
         scale=4,
         model_path=settings.UPSCALIER_PATH,
         model=esrgan,
-        tile=512,
+        tile=0,
         tile_pad=10,
         pre_pad=0,
         half=False

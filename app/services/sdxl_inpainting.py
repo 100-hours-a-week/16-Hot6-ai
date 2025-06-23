@@ -43,6 +43,7 @@ class SDXL:
 
             logger.info(f"Generated Image: {save_path}")
 
+            del mask, image, result
             return save_path
         
         except Exception as e:
@@ -95,6 +96,8 @@ class SDXL:
             end_time = time.time()
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
+            
+            del image, mask_image, result
             return save_path
         except Exception as e:
             logger.error(f"sdxl_style is failed: {e}")
