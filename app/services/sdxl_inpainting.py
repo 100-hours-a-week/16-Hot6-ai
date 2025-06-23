@@ -119,7 +119,12 @@ class SDXL:
             
             self.pipe.disable_lora()
             self.pipe.unload_lora_weights()
-            
+            # 3) lora_layers.clear()
+            for m in (self.pipe.unet,
+                    getattr(self.pipe,"text_encoder",None),
+                    getattr(self.pipe,"text_encoder_2",None)):
+                if m is not None and hasattr(m,"lora_layers"):
+                    m.lora_layers.clear()
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
             result.save(save_path)
