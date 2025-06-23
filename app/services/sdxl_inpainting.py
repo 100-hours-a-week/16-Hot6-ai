@@ -12,25 +12,24 @@ class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
     
-    # def unload_all_lora(self):
-    #     for module_name in ["unet", "text_encoder", "text_encoder_2"]:
-    #         module = getattr(self.pipe, module_name, None)
+    def free_all_loras(self):
+        """
+        diffusers 0.33 전용 –  LoRA VRAM 확실히 반환
+        """
+        # 1) 전체 LoRA 비활성화
+        self.pipe.disable_lora()                      # base 모델만 남도록
 
-    #         # 1. delete_adapters(): diffusers adapter 구조 제거
-    #         adapter_dict = self.pipe.adapters.get(module_name, {})
-    #         for adapter_name in list(adapter_dict.keys()):
-    #             self.pipe.delete_adapters(adapter_name)
+        # 2) adapter·tensor 완전 삭제
+        for name in list(self.pipe.adapters["unet"]):
+            self.pipe.delete_adapters(name)           # UNet-/TextEncoder-/TextEncoder2 dict 전부 제거
+        for m in ["unet", "text_encoder", "text_encoder_2"]:
+            mod = getattr(self.pipe, m, None)
+            if hasattr(mod, "lora_layers"):
+                mod.lora_layers.clear()          # tensor 객체도 참조 해제
 
-    #         # 2. lora_layers 제거
-    #         if hasattr(module, "lora_layers"):
-    #             module.lora_layers.clear()
-
-    #     # 3. 메모리 강제 정리
-    #     gc.collect()
-    #     torch.cuda.empty_cache()
-    #     print("✅ 모든 LoRA adapter가 메모리 및 VRAM에서 제거되었습니다.")
-    #     logger.info(f'vram 사용량: {torch.cuda.memory_allocated() / 1024 ** 2:.2f} MB')
-    
+        # 3) 파이썬 & PyTorch GC
+        gc.collect()
+        torch.cuda.empty_cache()
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
         try:
@@ -110,12 +109,11 @@ class SDXL:
 
             #### lora unload(delete) 해주기
             # self.pipe.unload_lora_weights()
-            self.pipe.set_adapters(["BASIC"],[1.0])
+            # self.pipe.set_adapters(["BASIC"],[1.0])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
-            self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
-            self.pipe.unload_lora_weights()
-            gc.collect()
-            torch.cuda.empty_cache()
+            # self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
+            # self.pipe.unload_lora_weights()
+            self.free_all_loras()
             
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
