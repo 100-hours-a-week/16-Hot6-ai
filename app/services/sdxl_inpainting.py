@@ -12,28 +12,27 @@ class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
         
-    
-    
-    def free_all_loras(self):
-        if not hasattr(self.pipe, "adapters"):
-            return  # LoRA가 한번도 성공적으로 로드되지 않음
 
-        self.pipe.disable_lora()
+    # def free_all_loras(self):
+    #     if not hasattr(self.pipe, "adapters"):
+    #         return  # LoRA가 한번도 성공적으로 로드되지 않음
 
-        for name in list(self.pipe.adapters["unet"]):
-            self.pipe.delete_adapters(name)
-        for m in ["unet", "text_encoder", "text_encoder_2"]:
-            mod = getattr(self.pipe, m, None)
-            if mod is not None and hasattr(mod, "lora_layers"):
-                mod.lora_layers.clear()
+    #     self.pipe.disable_lora()
 
-        gc.collect()
-        torch.cuda.empty_cache()
+    #     for name in list(self.pipe.adapters["unet"]):
+    #         self.pipe.delete_adapters(name)
+    #     for m in ["unet", "text_encoder", "text_encoder_2"]:
+    #         mod = getattr(self.pipe, m, None)
+    #         if mod is not None and hasattr(mod, "lora_layers"):
+    #             mod.lora_layers.clear()
 
-        # 4️⃣ 로깅
-        alloc = torch.cuda.memory_allocated() / 1024**2
-        resv  = torch.cuda.memory_reserved()  / 1024**2
-        logger.info(f"🧹 모든 LoRA 언로드 완료  ‖  VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
+    #     gc.collect()
+    #     torch.cuda.empty_cache()
+
+    #     # 4️⃣ 로깅
+    #     alloc = torch.cuda.memory_allocated() / 1024**2
+    #     resv  = torch.cuda.memory_reserved()  / 1024**2
+    #     logger.info(f"🧹 모든 LoRA 언로드 완료  ‖  VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
 # ─────────────────────────────────────────────────────────────
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
@@ -117,8 +116,9 @@ class SDXL:
             # self.pipe.set_adapters(["BASIC"],[1.0])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             # self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
-            # self.pipe.unload_lora_weights()
-            self.free_all_loras()
+            
+            self.disable_lora()
+            self.pipe.unload_lora_weights()
             
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
