@@ -43,7 +43,7 @@ class SDXL:
 
             logger.info(f"Generated Image: {save_path}")
 
-            del mask, image, result
+            del mask, image, result, generator
             return save_path
         
         except Exception as e:
@@ -68,7 +68,7 @@ class SDXL:
             )
             middle_time = time.time()
             logger.info(f"LoRA Load Time: {middle_time - start_time:.2f} seconds")
-            
+            logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             image = Image.open(image_path).convert("RGB")
             mask_image = Image.fromarray(np.ones((image.height, image.width), dtype=np.uint8) * 255)
             generator = torch.Generator(device="cuda").manual_seed(random.randint(0, 100000))
@@ -89,7 +89,7 @@ class SDXL:
 
             #### lora unload(delete) 해주기
             self.pipe.delete_adapters(CONFIG["adapter_name"])
-
+            logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
             result.save(save_path)
             logger.info(f"Style Changed: {save_path}")
@@ -97,7 +97,7 @@ class SDXL:
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
             
-            del image, mask_image, result
+            del image, mask_image, result, generator
             return save_path
         except Exception as e:
             logger.error(f"sdxl_style is failed: {e}")
