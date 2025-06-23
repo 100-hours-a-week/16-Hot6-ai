@@ -10,26 +10,6 @@ logger = logging.getLogger(__name__)
 class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
-
-    # def unload_all_lora(self):
-    #     for module_name in ["unet", "text_encoder", "text_encoder_2"]:
-    #         module = getattr(self.pipe, module_name, None)
-
-    #         # 1. delete_adapters(): diffusers adapter 구조 제거
-    #         adapter_dict = self.pipe.adapters.get(module_name, {})
-    #         for adapter_name in list(adapter_dict.keys()):
-    #             self.pipe.delete_adapters(adapter_name)
-
-    #         # 2. lora_layers 제거
-    #         if hasattr(module, "lora_layers"):
-    #             module.lora_layers.clear()
-
-    #     # 3. 메모리 강제 정리
-    #     gc.collect()
-    #     torch.cuda.empty_cache()
-    #     print("✅ 모든 LoRA adapter가 메모리 및 VRAM에서 제거되었습니다.")
-    #     logger.info(f'vram 사용량: {torch.cuda.memory_allocated() / 1024 ** 2:.2f} MB')
-        
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
         try:
