@@ -113,7 +113,10 @@ class SDXL:
             # self.pipe.set_adapters(["BASIC"],[1.0])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
-
+            self.pipe.delete_adapters(CONFIG["adapter_name"])
+            gc.collect()
+            torch.cuda.empty_cache()
+            
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
             result.save(save_path)
