@@ -1,4 +1,4 @@
-import re, requests, logging
+import re, requests, logging, json
 from functools import lru_cache
 from collections import OrderedDict, defaultdict
 from typing import List, Dict, Any
@@ -139,4 +139,5 @@ class NaverAPI:
                 item["product_code"] = self.extract_product_code(item.get("purchase_url", ""))
                 final_results.append(item)
 
+        logging.info("[NaverAPI] Matched Results:\n" + json.dumps(final_results, ensure_ascii=False, indent=2))
         return final_results

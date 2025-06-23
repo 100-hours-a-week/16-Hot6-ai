@@ -24,9 +24,7 @@ class Settings:
     BLIP_MODEL_PATH: str = os.getenv("BLIP_MODEL_PATH", "")
     BASE_MODEL_PATH: str = os.getenv("BASE_MODEL_PATH", "")
     VAE_PATH: str = os.getenv("VAE_PATH", "")
-    OTT_LORA_PATH: str = os.getenv("OTT_LORA_PATH", "")
-    STYLE_LORA_PATH: str = os.getenv("STYLE_LORA_PATH", "")
-    MSPAINT_LORA_PATH: str = os.getenv("MSPAINT_LORA_PATH", "")
+    
     DINO_MODEL_PATH: str = os.getenv("DINO_MODEL_PATH", "")
     SAM2_CHECKPOINT_PATH: str = os.getenv("SAM2_CHECKPOINT_PATH", "")
     SAM2_CONFIG_PATH: str = os.getenv("SAM2_CONFIG_PATH", "")
@@ -43,9 +41,45 @@ class Settings:
     NEGATIVE_PROMPT: str = PROMPT_CONFIG.get("negative_base", "")
     DINO_LABELS: list = PROMPT_CONFIG.get("dino_labels", [])
     
-    # SYSTEM_PROMPT: str = os.getenv("SYSTEM_PROMPT", "").replace("\\n", "\n")
-    # USER_PROMPT: str =(os.getenv("USER_PROMPT", "").replace("\\n", "\n"))  # 사용자 프롬프트 템플릿
-    # NEGATIVE_PROMPT: str = os.getenv("NEGATIVE_PROMPT", "")  # 부정 프롬프트 템플릿
+    #LoRA 설정
+    OTT_LORA_PATH: str = os.getenv("OTT_LORA_PATH", "")
+    STYLE_LORA_PATH: str = os.getenv("STYLE_LORA_PATH", "")
+    MSPAINT_LORA_PATH: str = os.getenv("MSPAINT_LORA_PATH", "")
+    OIL_PAINTING_LORA_PATH: str = os.getenv("OIL_PAINTING_LORA", "")
+    SIMPLE_CARTOON_LORA_PATH: str = os.getenv("SIMPLE_CARTOON_PATH", "")
+    CARTOON_LORA_PAYH: str = os.getenv("CARTOON_STYLE_PATH", "")
+    
+    
+    STYLE_CONFIG = {
+        "MSPAINT": {
+            "lora_path": MSPAINT_LORA_PATH,
+            "adapter_name": "MSPAINT",
+            "prompt": PROMPT_CONFIG.get("mspaint_prompt", ""),
+            "prompt_2": PROMPT_CONFIG.get("mspaint_prompt_2", ""),
+            "negative_prompt": PROMPT_CONFIG.get("mspaint_negative_prompt", ""),
+        },
+        "SIMPLE": {
+            "lora_path": SIMPLE_CARTOON_LORA_PATH,
+            "adapter_name": "SIMPLE",
+            "prompt": PROMPT_CONFIG.get("simple_prompt", ""),
+            "prompt_2": PROMPT_CONFIG.get("simple_prompt_2", ""),
+            "negative_prompt": PROMPT_CONFIG.get("simple_negative_prompt", ""),
+        },
+        "OIL": {
+            "lora_path": OIL_PAINTING_LORA_PATH,
+            "adapter_name": "OIL",
+            "prompt": PROMPT_CONFIG.get("oil_prompt", ""),
+            "prompt_2": PROMPT_CONFIG.get("oil_prompt_2", ""),
+            "negative_prompt": PROMPT_CONFIG.get("oil_negative_prompt", ""),
+        },
+        "CARTOON": {
+            "lora_path": CARTOON_LORA_PAYH,
+            "adapter_name": "CARTOON",
+            "prompt": PROMPT_CONFIG.get("cartoon_prompt", ""),
+            "prompt_2": PROMPT_CONFIG.get("cartoon_prompt_2", ""),
+            "negative_prompt": PROMPT_CONFIG.get("cartoon_negative_prompt", ""),
+        }
+    }
     
     # 기타 설정 / 추후 추가 필요
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"

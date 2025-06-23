@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import requests, os, threading
-import logging
+import requests, os, threading, logging, time
 from shutdown import shutdown_event
 # from services.img2txt import ImageToText
 # from services.txt2img import TextToImage
@@ -21,8 +20,7 @@ from utils.delete_image import delete_images
 from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
-from routers import healthcheck
-from routers import info
+from routers import healthcheck, info
 
 app = FastAPI()
 # healthcheck
@@ -50,9 +48,9 @@ def shutdown_gpu():
 
 def image_worker():
     while True:
-        image_url, tmp_filename = task_queue.get()
+        image_url, concept, tmp_filename = task_queue.get()
         try:
-            run_image_generate(image_url, tmp_filename)
+            run_image_generate(image_url, concept, tmp_filename)
         except Exception as e:
             print(f"[ERROR] Image task failed: {e}")
         finally:
@@ -83,7 +81,7 @@ async def classify_image(req: ImageRequest):
             "classify": "false"
         }
 
-    task_queue.put((image_url, tmp_filename))
+    task_queue.put((image_url, req.concept, tmp_filename))
 
     return {
         "initial_image_url": image_url,
@@ -91,7 +89,7 @@ async def classify_image(req: ImageRequest):
     }
 
 # ===== 이미지 생성 파이프라인 =====
-def run_image_generate(image_url: str, tmp_filename: str):
+def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     # Load Variable
     gdino = GroundingDINO(app.state.processor, app.state.dino)
     sam2 = SAM(app.state.sam2_predictor)
@@ -100,7 +98,8 @@ def run_image_generate(image_url: str, tmp_filename: str):
     upscaler = app.state.upscaler
     origin_image_path = load_image(image_url)
     s3 = S3()
-
+    start_time = time.time()
+    logger.info(f"[START] Image generation for {image_url} with concept {concept}")
     # Masking & Labeling
     boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
     location_info = format_location_info_natural(origin_image_label)
@@ -122,8 +121,9 @@ def run_image_generate(image_url: str, tmp_filename: str):
     naver = NaverAPI(raw_items=[], category="decor")
     products = naver.run_with_coords(products)
     
-    #style_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="basic_lora", lora_weight=2.0)
-    #clear_cache()
+    if concept != "BASIC":
+        sdxl_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="basic_lora", lora_weight=2.0)
+        clear_cache()
 
     # Image Upscaling
     result_image_path = upscaling(upscaler, sdxl_image_path)
@@ -134,3 +134,6 @@ def run_image_generate(image_url: str, tmp_filename: str):
     notify_backend(image_url, generated_image_url, products)
     clear_cache()
     delete_images()
+    end_time = time.time()
+    logger.info(f"[END] Image generation completed in {end_time - start_time:.2f} seconds")
+    

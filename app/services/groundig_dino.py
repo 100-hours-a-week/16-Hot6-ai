@@ -108,5 +108,5 @@ class GroundingDINO:
                 p["center_x"], p["center_y"] = coords.pop(0)
             else:
                 p["center_x"], p["center_y"] = None, None
-
+        logging.info(f"dino_label이 포함된 product만 좌표 뽑기 : {products}")
         return products
