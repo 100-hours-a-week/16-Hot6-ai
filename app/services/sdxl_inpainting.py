@@ -117,7 +117,7 @@ class SDXL:
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             # self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
             
-            self.disable_lora()
+            self.pipe.disable_lora()
             self.pipe.unload_lora_weights()
             
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
