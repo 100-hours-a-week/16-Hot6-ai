@@ -40,8 +40,26 @@ def init_models(app):
 
     pipe.load_lora_weights(
         settings.OTT_LORA_PATH,
-        weight_name = os.path.basename(settings.OTT_LORA_PATH),
-        adapter_name = "BASIC"
+        weight_name = os.path.basename(settings.MSPAINT_LORA_PATH),
+        adapter_name = "MSPAINT"
+    )
+
+    pipe.load_lora_weights(
+        settings.OTT_LORA_PATH,
+        weight_name = os.path.basename(settings.OIL_PAINTING_LORA_PATH),
+        adapter_name = "OIL"
+    )
+
+    pipe.load_lora_weights(
+        settings.OTT_LORA_PATH,
+        weight_name = os.path.basename(settings.SIMPLE_CARTOON_LORA_PATH),
+        adapter_name = "SIMPLE"
+    )
+
+    pipe.load_lora_weights(
+        settings.OTT_LORA_PATH,
+        weight_name = os.path.basename(settings.CARTOON_LORA_PATH),
+        adapter_name = "CARTOON"
     )
 
     # Real-ESRGAN

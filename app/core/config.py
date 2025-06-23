@@ -47,7 +47,7 @@ class Settings:
     MSPAINT_LORA_PATH: str = os.getenv("MSPAINT_LORA_PATH", "")
     OIL_PAINTING_LORA_PATH: str = os.getenv("OIL_PAINTING_LORA", "")
     SIMPLE_CARTOON_LORA_PATH: str = os.getenv("SIMPLE_CARTOON_PATH", "")
-    CARTOON_LORA_PAYH: str = os.getenv("CARTOON_STYLE_PATH", "")
+    CARTOON_LORA_PATH: str = os.getenv("CARTOON_STYLE_PATH", "")
     
     
     STYLE_CONFIG = {
@@ -73,7 +73,7 @@ class Settings:
             "negative_prompt": PROMPT_CONFIG.get("oil_negative_prompt", ""),
         },
         "CARTOON": {
-            "lora_path": CARTOON_LORA_PAYH,
+            "lora_path": CARTOON_LORA_PATH,
             "adapter_name": "CARTOON",
             "prompt": PROMPT_CONFIG.get("cartoon_prompt", ""),
             "prompt_2": PROMPT_CONFIG.get("cartoon_prompt_2", ""),
