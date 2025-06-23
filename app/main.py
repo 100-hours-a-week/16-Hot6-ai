@@ -122,7 +122,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     products = naver.run_with_coords(products)
     
     if concept != "BASIC":
-        sdxl_image_path = sdxl.sdxl_style(sdxl_image_path, lora_name="basic_lora", lora_weight=2.0)
+        sdxl_image_path = sdxl.sdxl_style(sdxl_image_path, concept=concept)
         clear_cache()
 
     # Image Upscaling

@@ -39,9 +39,9 @@ def init_models(app):
     ).to("cuda")
 
     pipe.load_lora_weights(
-        settings.STYLE_LORA_PATH,
-        weight_name = os.path.basename(settings.STYLE_LORA_PATH),
-        adapter_name = "basic_lora"
+        settings.OTT_LORA_PATH,
+        weight_name = os.path.basename(settings.OTT_LORA_PATH),
+        adapter_name = "BASIC"
     )
 
     # Real-ESRGAN
