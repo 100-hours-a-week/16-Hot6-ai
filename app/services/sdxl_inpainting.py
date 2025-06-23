@@ -112,7 +112,7 @@ class SDXL:
             # self.pipe.unload_lora_weights()
             # self.pipe.set_adapters(["BASIC"],[1.0])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
-            self.pipe.set_lora_device(CONFIG["adapter_name"], "cpu")
+            self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
 
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
