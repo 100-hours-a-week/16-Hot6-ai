@@ -3,6 +3,7 @@ import torch, gc
 import numpy as np
 import random
 from core.config import settings
+from utils.clear_cache import clear_cache
 import logging, time
 
 logger = logging.getLogger(__name__)
@@ -108,8 +109,8 @@ class SDXL:
             ).images[0]
 
             #### lora unload(delete) 해주기
-            # self.pipe.unload_lora_weights()
-            self.pipe.delete_adapters(CONFIG["adapter_name"])
+            self.pipe.unload_lora_weights()
+            # self.pipe.delete_adapters(CONFIG["adapter_name"])
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
             result.save(save_path)
@@ -118,13 +119,14 @@ class SDXL:
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
 
-            # self.pipe.load_lora_weights(
-            #     settings.OTT_LORA_PATH,
-            #     torch_dtype=torch.float16,
-            #     weight_name = "BASIC",
-            #     adapter_name = "BASIC"
-            # )
+            self.pipe.load_lora_weights(
+                settings.OTT_LORA_PATH,
+                torch_dtype=torch.float16,
+                weight_name = "BASIC",
+                adapter_name = "BASIC"
+            )
             del image, mask_image, result, generator
+            clear_cache()
             return save_path
         except Exception as e:
             logger.error(f"sdxl_style is failed: {e}")
