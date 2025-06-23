@@ -11,28 +11,23 @@ class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
 
-    def unload_lora(self, adapter_name: str):
-        # 1. Diffusers adapter 구조에서 제거
-        if hasattr(self.pipe, "delete_adapters"):
-            self.pipe.delete_adapters(adapter_name)
+    def unload_all_lora(self):
+        for module_name in ["unet", "text_encoder", "text_encoder_2"]:
+            module = getattr(self.pipe, module_name, None)
 
-        # 2. LoRA layer hook 제거 (안 보이는 참조 차단)
-        # UNet
-        if hasattr(self.pipe.unet, "lora_layers") and adapter_name in self.pipe.unet.lora_layers:
-            del self.pipe.unet.lora_layers[adapter_name]
+            # 1. delete_adapters(): diffusers adapter 구조 제거
+            adapter_dict = self.pipe.adapters.get(module_name, {})
+            for adapter_name in list(adapter_dict.keys()):
+                self.pipe.delete_adapters(adapter_name)
 
-        # Text Encoder 1
-        if hasattr(self.pipe, "text_encoder") and hasattr(self.pipe.text_encoder, "lora_layers"):
-            self.pipe.text_encoder.lora_layers.pop(adapter_name, None)
+            # 2. lora_layers 제거
+            if hasattr(module, "lora_layers"):
+                module.lora_layers.clear()
 
-        # Text Encoder 2 (SDXL용)
-        if hasattr(self.pipe, "text_encoder_2") and hasattr(self.pipe.text_encoder_2, "lora_layers"):
-            self.pipe.text_encoder_2.lora_layers.pop(adapter_name, None)
-
-        # 3. GC + VRAM 정리
+        # 3. 메모리 강제 정리
         gc.collect()
         torch.cuda.empty_cache()
-        logger.info(f"✅ LoRA '{adapter_name}' 완전히 언로드 완료")
+        print("✅ 모든 LoRA adapter가 메모리 및 VRAM에서 제거되었습니다.")
         logger.info(f'vram 사용량: {torch.cuda.memory_allocated() / 1024 ** 2:.2f} MB')
         
     
@@ -113,10 +108,16 @@ class SDXL:
             ).images[0]
 
             #### lora unload(delete) 해주기
-            self.unload_lora(CONFIG["adapter_name"])
+            self.unload_all_lora()
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
+            self.pipe.load_lora_weights(
+                settings.OTT_LORA_PATH,
+                torch_dtype=torch.float16,
+                weight_name = "BASIC",
+                adapter_name = "BASIC"
+            )
             result.save(save_path)
             logger.info(f"Style Changed: {save_path}")
             end_time = time.time()
