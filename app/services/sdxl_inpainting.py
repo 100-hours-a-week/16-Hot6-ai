@@ -23,7 +23,7 @@ class SDXL:
             mask = Image.open(mask_image).convert("L")
             generator = torch.Generator(device = "cuda").manual_seed(random.randint(0, 100000))
 
-            self.pipe.set_adapters(["ott_lora"], [1.0])
+            self.pipe.set_adapters(["BASIC"], [1.0])
             #self.pipe.fuse_lora()
             
             result = self.pipe(
@@ -51,7 +51,7 @@ class SDXL:
     def sdxl_style(self, image_path, concept :str = None, lora_weight :float = None):
         try:
             if concept is None:
-                concept = "basic_lora"
+                concept = "BASIC"
             if lora_weight is None:
                 lora_weight = 2.0
             CONFIG = settings.STYLE_CONFIG[concept]
