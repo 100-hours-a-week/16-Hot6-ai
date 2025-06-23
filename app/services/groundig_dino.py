@@ -18,7 +18,7 @@ class GroundingDINO:
             txt = "monitor. keyboard. mouse. laptop. speaker."
         try:
             image = Image.open(path).convert("RGB")
-            inputs = self.processor(images=image, text=txt, return_tensors="pt").to("cuda")
+            inputs = self.processor(images=image, text=txt, return_tensors="pt").to("cpu")
 
             with torch.no_grad():
                 outputs = self.dino(**inputs)
@@ -32,7 +32,7 @@ class GroundingDINO:
             )[0]
 
             boxes = results["boxes"].cpu().numpy()
-            boxes = torch.tensor(boxes).to("cuda")
+            boxes = torch.tensor(boxes).to("cpu")
             labels = results["text_labels"]
 
             label_to_centers = defaultdict(list)
@@ -54,7 +54,7 @@ class GroundingDINO:
             txt = ". ".join(labels) + "."
             image = Image.open(image_path)
 
-            inputs = self.processor(images=image, text=txt, return_tensors="pt").to("cuda")
+            inputs = self.processor(images=image, text=txt, return_tensors="pt").to("cpu")
 
             with torch.no_grad():
                 outputs = self.dino(**inputs)

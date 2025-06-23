@@ -15,7 +15,7 @@ class SAM:
             image_source = np.array(image)
             self.sam2_predictor.set_image(image_source)
 
-            with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+            with torch.inference_mode(), torch.autocast("cpu", dtype=torch.bfloat16):
                 masks, _, _ = self.sam2_predictor.predict(
                     point_coords=None,
                     point_labels=None,
