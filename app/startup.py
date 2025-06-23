@@ -14,20 +14,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 def init_models(app):
-    """"
-    # BLIP 불러오기
-    blip_model_path = settings.BLIP_MODEL_PATH
-
-    processor = BlipProcessor.from_pretrained(blip_model_path, use_fast=True)
-    blip_model = BlipForConditionalGeneration.from_pretrained(
-        blip_model_path,
-        torch_dtype = torch.float16
-    )
-
-    blip_model = blip_model.to("cuda", torch.float16)
-    logger.info("BLIP 모델 로딩 완료")
-    """""
-
     # Grounding dino
     dino_model_path = settings.DINO_MODEL_PATH
 
@@ -58,21 +44,7 @@ def init_models(app):
         adapter_name = "basic_lora"
     )
 
-    # pipe.load_lora_weights(
-    #     settings.MSPAINT_LORA_PATH,
-    #     weight_name = os.path.basename(settings.MSPAINT_LORA_PATH),
-    #     adapter_name = "mspaint_lora"
-    # )
-    
-    """"
-    pipe.load_lora_weights(
-        settings.LORA_3D_PATH,
-        weight_name = os.path.basename(settings.LORA_3D_PATH),
-        adapter_name = "d3_lora"
-    )
-    """
     # Real-ESRGAN
-
     esrgan = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64,num_block=23, num_grow_ch=32, scale=4)
     
     upscaler = RealESRGANer(

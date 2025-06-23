@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import random
 from core.config import settings
-import logging
+import logging, time
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +17,13 @@ class SDXL:
                 negative_prompt = f"{settings.NEGATIVE_PROMPT}, photorealistic, realistic texture"
 
             if prompt_2 is None:
-                prompt_2 = "ottstyle, cinematic"
+                prompt_2 = "ott_style, cinematic"
             
             image = Image.open(origin_image).convert("RGB")
             mask = Image.open(mask_image).convert("L")
             generator = torch.Generator(device = "cuda").manual_seed(random.randint(0, 100000))
 
-            self.pipe.set_adapters(["basic_lora"], [1.0])
+            self.pipe.set_adapters(["ott_lora"], [1.0])
             #self.pipe.fuse_lora()
             
             result = self.pipe(
@@ -48,26 +48,36 @@ class SDXL:
         except Exception as e:
             logger.error(f"SDXL_Inpating is failed: {e}")
 
-    def sdxl_style(self, image_path, lora_name :str = None, lora_weight :float = None):
+    def sdxl_style(self, image_path, concept :str = None, lora_weight :float = None):
         try:
-            if lora_name is None:
-                lora_name = "basic_lora"
+            if concept is None:
+                concept = "basic_lora"
             if lora_weight is None:
                 lora_weight = 2.0
-
+            CONFIG = settings.STYLE_CONFIG[concept]
+            start_time = time.time()
+            logger.info(f"Load lora: {CONFIG['adapter_name']} with weight: {lora_weight}")
+            
+            # LoRA Load
+            self.pipe.load_lora_weights(
+                CONFIG["lora_path"],
+                torch_dtype=torch.float16,
+                weight_name = CONFIG["adapter_name"],
+                adapter_name = CONFIG["adapter_name"]
+            )
+            middle_time = time.time()
+            logger.info(f"LoRA Load Time: {middle_time - start_time:.2f} seconds")
+            
             image = Image.open(image_path).convert("RGB")
             mask_image = Image.fromarray(np.ones((image.height, image.width), dtype=np.uint8) * 255)
             generator = torch.Generator(device="cuda").manual_seed(random.randint(0, 100000))
 
-            negative_prompt = settings.NEGATIVE_PROMPT
-
-            self.pipe.set_adapters([f"{lora_name}"], [lora_weight])
-            #self.pipe.fuse_lora()
+            self.pipe.set_adapters([CONFIG["adapter_name"]], [lora_weight])
 
             result = self.pipe(
-                prompt = "desk setup. keep the layout and objects the same, just change the art style to a semi-realistic 3D render.",
-                prompt_2 = f"{lora_name}, concept art, high detail",
-                negative_prompt = negative_prompt,
+                prompt = CONFIG["prompt"],
+                prompt_2 = CONFIG["prompt_2"],
+                negative_prompt = CONFIG["negative_prompt"],
                 image = image,
                 mask_image = mask_image,
                 guidance_scale = 9.0,
@@ -76,11 +86,15 @@ class SDXL:
                 generator=generator
             ).images[0]
 
+            #### lora unload(delete) 해주기
+            self.pipe.delete_adapters(CONFIG["adapter_name"])
+
             save_path = "./content/temp/style.png"
             result.save(save_path)
-
             logger.info(f"Style Changed: {save_path}")
-
+            end_time = time.time()
+            logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
+            logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
             return save_path
         except Exception as e:
             logger.error(f"sdxl_style is failed: {e}")
