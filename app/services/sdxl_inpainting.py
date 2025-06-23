@@ -113,7 +113,7 @@ class SDXL:
             ).images[0]
 
             #### lora unload(delete) 해주기
-            self.unload_lora(self.pipe, CONFIG["adapter_name"])
+            self.unload_lora(CONFIG["adapter_name"])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
