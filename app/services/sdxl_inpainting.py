@@ -1,5 +1,5 @@
 from PIL import Image
-import torch
+import torch, gc
 import numpy as np
 import random
 from core.config import settings
@@ -11,6 +11,31 @@ class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
 
+    def unload_lora(self, adapter_name: str):
+        # 1. Diffusers adapter 구조에서 제거
+        if hasattr(self.pipe, "delete_adapters"):
+            self.pipe.delete_adapters(adapter_name)
+
+        # 2. LoRA layer hook 제거 (안 보이는 참조 차단)
+        # UNet
+        if hasattr(self.pipe.unet, "lora_layers") and adapter_name in self.pipe.unet.lora_layers:
+            del self.pipe.unet.lora_layers[adapter_name]
+
+        # Text Encoder 1
+        if hasattr(self.pipe, "text_encoder") and hasattr(self.pipe.text_encoder, "lora_layers"):
+            self.pipe.text_encoder.lora_layers.pop(adapter_name, None)
+
+        # Text Encoder 2 (SDXL용)
+        if hasattr(self.pipe, "text_encoder_2") and hasattr(self.pipe.text_encoder_2, "lora_layers"):
+            self.pipe.text_encoder_2.lora_layers.pop(adapter_name, None)
+
+        # 3. GC + VRAM 정리
+        gc.collect()
+        torch.cuda.empty_cache()
+        logger.info(f"✅ LoRA '{adapter_name}' 완전히 언로드 완료")
+        logger.info(f'vram 사용량: {torch.cuda.memory_allocated() / 1024 ** 2:.2f} MB')
+        
+    
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
         try:
             if negative_prompt is None:
@@ -88,7 +113,8 @@ class SDXL:
             ).images[0]
 
             #### lora unload(delete) 해주기
-            self.pipe.delete_adapters(CONFIG["adapter_name"])
+            self.unload_lora(self.pipe, CONFIG["adapter_name"])
+            # self.pipe.delete_adapters(CONFIG["adapter_name"])
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
             result.save(save_path)
@@ -101,3 +127,5 @@ class SDXL:
             return save_path
         except Exception as e:
             logger.error(f"sdxl_style is failed: {e}")
+            
+            
