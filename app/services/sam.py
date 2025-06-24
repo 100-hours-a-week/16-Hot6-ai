@@ -29,9 +29,9 @@ class SAM:
                 masks = masks.squeeze(1)
             self.sam2_predictor.to("cpu")
             
-            del image, image_source
+            del image
             clear_cache()
-            logger.info(f"Success Segmentation.")            
+            logger.info(f"Success Segmentation.")
             return masks
         
         except Exception as e:

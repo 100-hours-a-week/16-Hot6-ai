@@ -44,6 +44,7 @@ def init_models(app):
         adapter_name = "BASIC"
     )
     pipe.enable_attention_slicing()
+    
     # pipe.enable_sequential_cpu_offload()
     # pipe.load_lora_weights(
     #     settings.OIL_PAINTING_LORA_PATH,
@@ -70,7 +71,7 @@ def init_models(app):
         scale=4,
         model_path=settings.UPSCALIER_PATH,
         model=esrgan,
-        tile=512,
+        tile=256,
         tile_pad=10,
         pre_pad=0,
         half=True
