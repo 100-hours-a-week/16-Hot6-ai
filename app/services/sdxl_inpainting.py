@@ -161,9 +161,9 @@ class SDXL:
             
             # self.del_lora(concept)
 
-            self.pipe.flush_all_loras()
+            self.flush_all_loras()
             
-            self.pipe.remove_lora(CONFIG["adapter_name"])
+            self.remove_lora(CONFIG["adapter_name"])
             
             #### lora unload(delete) 해주기
             # self.pipe.unload_lora_weights()
