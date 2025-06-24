@@ -15,5 +15,5 @@ def upscaling(upscaler, image_path):
 
 
     logger.info(f"이미지 업 스케일 완료: {save_path}")
-
+    del img, output, img_np, _
     return save_path
