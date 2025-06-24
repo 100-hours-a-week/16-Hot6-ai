@@ -143,7 +143,7 @@ class GPT_API:
         """
         system_prompt = system_prompt_template.format(dino_label_string=settings.DINO_LABELS)
         
-        user_prompt = user_prompt_template.format(location_info=location_info)
+        user_prompt = user_prompt_template.format(location_info=location_info, dino_label_string=settings.DINO_LABELS)
         # GPT-4o 모델에 요청 보내기
         response = self.client.chat.completions.create(
                     model = "gpt-4o",
