@@ -134,6 +134,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     # Upload S3 & Send
     generated_image_url = s3.save_s3(result_image_path)
     notify_backend(image_url, generated_image_url, products)
+    del products
     clear_cache()
     delete_images()
     end_time = time.time()
