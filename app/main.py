@@ -95,7 +95,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     sam2 = SAM(app.state.sam2_predictor)
     sdxl = SDXL(app.state.pipe)
     gpt = GPT_API(app.state.gpt_client)
-    upscaler = app.state.upscaler
+    esrgan = app.state.esrgan
     origin_image_path = load_image(image_url)
     s3 = S3()
     start_time = time.time()
@@ -126,7 +126,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
         clear_cache()
 
     # Image Upscaling
-    result_image_path = upscaling(upscaler, sdxl_image_path)
+    result_image_path = upscaling(esrgan, sdxl_image_path)
     clear_cache()
 
     # Upload S3 & Send

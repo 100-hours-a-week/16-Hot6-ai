@@ -2,8 +2,7 @@ from core.config import settings
 # from transformers import BlipProcessor, BlipForConditionalGeneration
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 from diffusers import DiffusionPipeline, AutoencoderKL
-from realesrgan.utils import RealESRGANer
-from basicsr.archs.rrdbnet_arch import RRDBNet
+from RealESRGAN import RealESRGAN
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 import torch
@@ -65,23 +64,14 @@ def init_models(app):
     # )
 
     # Real-ESRGAN
-    esrgan = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64,num_block=23, num_grow_ch=32, scale=4)
-    
-    upscaler = RealESRGANer(
-        scale=4,
-        model_path=settings.UPSCALIER_PATH,
-        model=esrgan,
-        tile=256,
-        tile_pad=10,
-        pre_pad=0,
-        half=True
-    )
+    esrgan = RealESRGAN(torch.device('cuda' if torch.cuda.is_available() else 'cpu'), scale=4)
+    esrgan.load_weights('weights/RealESRGAN_x4plus.pth', download=True)
 
     app.state.processor = processor
     app.state.dino = dino
     app.state.sam2_predictor = sam2_predictor
     app.state.pipe = pipe
     app.state.gpt_client = gpt_client
-    app.state.upscaler = upscaler
+    app.state.esrgan = esrgan
     
     logger.info("Model Initialized and Loaded to GPU")
