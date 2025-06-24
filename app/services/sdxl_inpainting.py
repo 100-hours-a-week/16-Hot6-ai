@@ -13,45 +13,72 @@ class SDXL:
         self.pipe = pipe
         
 
-    # def flush_all_loras(self):
-    #     """
-    #     1) disable_lora()           : LoRA 효과 끄기
-    #     2) unload_lora_weights()    : 어댑터 레지스트리 제거
-    #     3) lora_layers.clear()      : 실제 weight 텐서 참조 해제
-    #     4) gc + empty_cache()       : 파이썬·CUDA 캐시 반환
-    #     """
-    #     # ─────────────────────────── 1. 적용 끄기
-    #     if hasattr(self.pipe, "disable_lora"):
-    #         self.pipe.disable_lora()
+    def flush_all_loras(self) -> None:
+        """
+        diffusers 0.33.1
+        1) disable_lora()               : LoRA 효과 해제
+        2) unload_lora_weights()        : adapters 레지스트리 제거
+        3) lora_layers.clear()          : weight 텐서 참조 해제
+        4) gc + empty_cache()           : 캐시 반환 → VRAM↓
+        """
+        # 1) 적용 해제
+        if hasattr(self.pipe, "disable_lora"):
+            self.pipe.disable_lora()
 
-    #     # ─────────────────────────── 2. 레지스트리 비우기
-    #     if hasattr(self.pipe, "unload_lora_weights"):
-    #         self.pipe.unload_lora_weights()   # 모든 LoRA 이름 사라짐
+        # 2) 레지스트리 제거
+        if hasattr(self.pipe, "unload_lora_weights"):
+            self.pipe.unload_lora_weights()
 
-    #     # ─────────────────────────── 3. 텐서 참조 해제
-    #     for module_name in ("unet", "text_encoder", "text_encoder_2"):
-    #         mod = getattr(self.pipe, module_name, None)
-    #         if mod is not None and hasattr(mod, "lora_layers"):
-    #             mod.lora_layers.clear()  # GPU·RAM 텐서 객체 해제
+        # 3) 텐서 참조 해제
+        for module_name in ("unet", "text_encoder", "text_encoder_2"):
+            mod = getattr(self.pipe, module_name, None)
+            if mod is not None and hasattr(mod, "lora_layers"):
+                mod.lora_layers.clear()
 
-    #     # ─────────────────────────── 4. 캐시 반환
-    #     gc.collect()
-    #     torch.cuda.empty_cache()
+        # 4) 캐시 반환
+        gc.collect()
+        torch.cuda.empty_cache()
 
-    #     alloc = torch.cuda.memory_allocated() / 1024**2
-    #     resv  = torch.cuda.memory_reserved()  / 1024**2
-    #     logger.info(f"🧹 LoRA 완전 언로드 | VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
+        alloc = torch.cuda.memory_allocated() / 1024**2
+        resv  = torch.cuda.memory_reserved()  / 1024**2
+        logger.info(f"🧹  LoRA 전체 언로드 | VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
 
-    def del_lora(self, concept):
+    # ─────────────────────────────────────────────────────────
+    def remove_lora(self, adapter_name: str) -> bool:
+        """
+        특정 LoRA adapter 하나만 안전하게 제거
+        반환값: True(제거됨) / False(해당 이름 없음)
+        """
+        # adapters dict 존재 여부 확인
+        if not (hasattr(self.pipe, "adapters") and
+                adapter_name in self.pipe.adapters.get("unet", {})):
+            logger.warning(f"[remove_lora] '{adapter_name}' not found.")
+            return False
 
-        components = ["unet", "text_encoder", "text_encoder_2"]
+        # disable_lora() 로 먼저 비활성화
+        if hasattr(self.pipe, "disable_lora"):
+            self.pipe.disable_lora()
 
-        for component in components:
-            model = getattr(self.pipe, component, None)
-            if model is not None and hasattr(model, "adapters"):
-                if concept in model.adapters:
-                    print(f"Delete Lora")
-                    del model.adapters[concept]
+        # diffusers 공식 API: 레지스트리 + 텐서 함께 제거
+        self.pipe.delete_adapters(adapter_name)
+
+        # GC & 캐시 정리 (선택)
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        logger.info(f"[remove_lora] '{adapter_name}' removed.")
+        return True
+
+    # def del_lora(self, concept):
+
+    #     components = ["unet", "text_encoder", "text_encoder_2"]
+    #     self.pipe.disable_lora()
+    #     for component in components:
+    #         model = getattr(self.pipe, component, None)
+    #         if model is not None and hasattr(model, "adapters"):
+    #             if concept in model.adapters:
+    #                 print(f"Delete Lora")
+    #                 del model.adapters[concept]
     
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
@@ -130,10 +157,14 @@ class SDXL:
                 generator=generator
             ).images[0]
 
-            self.pipe.delete_adapters(f"{concept}")
+            # self.pipe.delete_adapters(f"{concept}")
+            
+            # self.del_lora(concept)
 
-            self.del_lora(concept)
-
+            self.pipe.flush_all_loras()
+            
+            self.pipe.remove_lora(CONFIG["adapter_name"])
+            
             #### lora unload(delete) 해주기
             # self.pipe.unload_lora_weights()
             # self.pipe.set_adapters(["BASIC"],[1.0])
