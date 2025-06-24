@@ -189,12 +189,12 @@ class SDXL:
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
             
-            # self.pipe.load_lora_weights(
-            #     settings.OTT_LORA_PATH,
-            #     torch_dtype=torch.float16,
-            #     weight_name = "BASIC",
-            #     adapter_name = "BASIC"
-            # )
+            self.pipe.load_lora_weights(
+                settings.OTT_LORA_PATH,
+                torch_dtype=torch.float16,
+                weight_name = "BASIC",
+                adapter_name = "BASIC"
+            )
             del image, mask_image, result, generator
             clear_cache()
             return save_path
