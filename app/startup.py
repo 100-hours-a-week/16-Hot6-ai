@@ -20,7 +20,7 @@ def init_models(app):
     processor = AutoProcessor.from_pretrained(dino_model_path)
     dino = AutoModelForZeroShotObjectDetection.from_pretrained(dino_model_path).to("cuda")
     # SAM 2.1
-    sam2_model = build_sam2(settings.SAM2_CONFIG_PATH, settings.SAM2_CHECKPOINT_PATH, device="cpu")
+    sam2_model = build_sam2(settings.SAM2_CONFIG_PATH, settings.SAM2_CHECKPOINT_PATH, device="cuda")
     sam2_predictor = SAM2ImagePredictor(sam2_model)
 
     # OpenAI GPT 클라이언트 초기화

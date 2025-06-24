@@ -12,7 +12,6 @@ class SAM:
 
     def run_sam(self, path, boxes):
         try:
-            self.sam2_predictor.to("cuda")
             image = Image.open(path).convert("RGB")
             image_source = np.array(image)
             self.sam2_predictor.set_image(image_source)
@@ -27,9 +26,8 @@ class SAM:
 
             if masks.ndim == 4:
                 masks = masks.squeeze(1)
-            self.sam2_predictor.to("cpu")
             
-            del image
+            del image, image_source
             clear_cache()
             logger.info(f"Success Segmentation.")
             return masks

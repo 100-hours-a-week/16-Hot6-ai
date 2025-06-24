@@ -43,6 +43,7 @@ class GroundingDINO:
                 label_to_centers[label].append((cx, cy))
 
             logger.info(f"Detected Object: {labels}")
+            del inputs, outputs, results, image
 
             return boxes, labels, label_to_centers
         
@@ -78,7 +79,7 @@ class GroundingDINO:
                 cy = int((y1 + y2) / 2)
                 label_to_centers[label].append((cx, cy))
             logger.info(f"Detected object: {label_to_centers}")
-
+            del inputs, outputs, results, image
             return label_to_centers
         except Exception as e:
             logger.error(f"Labeling is failed: {e}")
@@ -107,4 +108,5 @@ class GroundingDINO:
             else:
                 p["center_x"], p["center_y"] = None, None
         logging.info(f"dino_label이 포함된 product만 좌표 뽑기 : {products}")
+        del label_to_centers, labels
         return products
