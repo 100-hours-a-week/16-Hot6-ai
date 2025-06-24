@@ -44,7 +44,7 @@ def init_models(app):
         adapter_name = "BASIC"
     )
     pipe.enable_attention_slicing()
-    pipe.enable_sequential_cpu_offload()
+    # pipe.enable_sequential_cpu_offload()
     # pipe.load_lora_weights(
     #     settings.OIL_PAINTING_LORA_PATH,
     #     weight_name = os.path.basename(settings.OIL_PAINTING_LORA_PATH),
