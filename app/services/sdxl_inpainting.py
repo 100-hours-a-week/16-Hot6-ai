@@ -69,16 +69,16 @@ class SDXL:
         logger.info(f"[remove_lora] '{adapter_name}' removed.")
         return True
 
-    # def del_lora(self, concept):
+    def del_lora(self, concept):
 
-    #     components = ["unet", "text_encoder", "text_encoder_2"]
-    #     self.pipe.disable_lora()
-    #     for component in components:
-    #         model = getattr(self.pipe, component, None)
-    #         if model is not None and hasattr(model, "adapters"):
-    #             if concept in model.adapters:
-    #                 print(f"Delete Lora")
-    #                 del model.adapters[concept]
+        components = ["unet", "text_encoder", "text_encoder_2"]
+        self.pipe.disable_lora()
+        for component in components:
+            model = getattr(self.pipe, component, None)
+            if model is not None and hasattr(model, "adapters"):
+                if concept in model.adapters:
+                    print(f"Delete Lora")
+                    del model.adapters[concept]
     
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
@@ -157,13 +157,13 @@ class SDXL:
                 generator=generator
             ).images[0]
 
-            # self.pipe.delete_adapters(f"{concept}")
+            self.pipe.delete_adapters(f"{concept}")
             
-            # self.del_lora(concept)
+            self.del_lora(concept)
 
-            self.flush_all_loras()
+            # self.flush_all_loras()
             
-            self.remove_lora(CONFIG["adapter_name"])
+            # self.remove_lora(CONFIG["adapter_name"])
             
             #### lora unload(delete) 해주기
             # self.pipe.unload_lora_weights()
@@ -189,12 +189,12 @@ class SDXL:
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
             
-            self.pipe.load_lora_weights(
-                settings.OTT_LORA_PATH,
-                torch_dtype=torch.float16,
-                weight_name = "BASIC",
-                adapter_name = "BASIC"
-            )
+            # self.pipe.load_lora_weights(
+            #     settings.OTT_LORA_PATH,
+            #     torch_dtype=torch.float16,
+            #     weight_name = "BASIC",
+            #     adapter_name = "BASIC"
+            # )
             del image, mask_image, result, generator
             clear_cache()
             return save_path

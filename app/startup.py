@@ -65,7 +65,7 @@ def init_models(app):
 
     # Real-ESRGAN
     esrgan = RealESRGAN(torch.device('cuda' if torch.cuda.is_available() else 'cpu'), scale=4)
-    esrgan.load_weights('weights/RealESRGAN_x4plus.pth', download=True)
+    esrgan.load_weights(settings.UPSCALIER_PATH, download=True)
 
     app.state.processor = processor
     app.state.dino = dino
