@@ -2,8 +2,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import requests, os, threading, logging, time
 from shutdown import shutdown_event
-# from services.img2txt import ImageToText
-# from services.txt2img import TextToImage
 from services.groundig_dino import GroundingDINO
 from services.sdxl_inpainting import SDXL
 from services.sam import SAM
@@ -13,7 +11,7 @@ from services.masking import make_mask
 from utils.s3 import S3
 from utils.load_image import load_image
 from utils.clear_cache import clear_cache
-from utils.queue_manager import task_queue
+from utils.queue_manager import task_queue, queue_size
 from utils.upscaling import upscaling
 from utils.mapping import format_location_info_natural
 from utils.delete_image import delete_images
@@ -50,6 +48,7 @@ def image_worker():
     while True:
         image_url, concept, tmp_filename = task_queue.get()
         try:
+            logger.info(f"[WORKER] Queue before pop : {queue_size()+1}")
             run_image_generate(image_url, concept, tmp_filename)
         except Exception as e:
             print(f"[ERROR] Image task failed: {e}")

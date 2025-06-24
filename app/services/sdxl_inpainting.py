@@ -11,38 +11,6 @@ logger = logging.getLogger(__name__)
 class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
-        
-
-    def flush_all_loras(self) -> None:
-        """
-        diffusers 0.33.1
-        1) disable_lora()               : LoRA 효과 해제
-        2) unload_lora_weights()        : adapters 레지스트리 제거
-        3) lora_layers.clear()          : weight 텐서 참조 해제
-        4) gc + empty_cache()           : 캐시 반환 → VRAM↓
-        """
-        # 1) 적용 해제
-        if hasattr(self.pipe, "disable_lora"):
-            self.pipe.disable_lora()
-
-        # 2) 레지스트리 제거
-        if hasattr(self.pipe, "unload_lora_weights"):
-            self.pipe.unload_lora_weights()
-
-        # 3) 텐서 참조 해제
-        for module_name in ("unet", "text_encoder", "text_encoder_2"):
-            mod = getattr(self.pipe, module_name, None)
-            if mod is not None and hasattr(mod, "lora_layers"):
-                mod.lora_layers.clear()
-
-        # 4) 캐시 반환
-        gc.collect()
-        torch.cuda.empty_cache()
-
-        alloc = torch.cuda.memory_allocated() / 1024**2
-        resv  = torch.cuda.memory_reserved()  / 1024**2
-        logger.info(f"🧹  LoRA 전체 언로드 | VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
-
 
     def del_lora(self, concept):
 
@@ -165,12 +133,6 @@ class SDXL:
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
             
-            # self.pipe.load_lora_weights(
-            #     settings.OTT_LORA_PATH,
-            #     torch_dtype=torch.float16,
-            #     weight_name = "BASIC",
-            #     adapter_name = "BASIC"
-            # )
             del image, mask_image, result, generator
             clear_cache()
             return save_path
