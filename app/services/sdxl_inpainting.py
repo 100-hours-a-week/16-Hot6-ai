@@ -68,6 +68,36 @@ class SDXL:
 
         logger.info(f"[remove_lora] '{adapter_name}' removed.")
         return True
+    
+    def switch_to_lora(self, path: str, name: str, weight: float = 1.0):
+        """
+        1) 현재 활성 LoRA 전부 끄고 + 텐서 제거
+        2) 새 LoRA 하나만 로드·활성화
+        """
+        self.flush_all_loras()                         # VRAM 0.5~1 GB 즉시 회수
+
+        self.pipe.load_lora_weights(
+            path,
+            adapter_name=name,
+            torch_dtype=torch.float16
+        )
+        self.pipe.set_adapters([name], [weight])
+
+    def reset_to_basic(self, basic_path: str, basic_name: str = "BASIC"):
+        """
+        LoRA 체인을 BASIC 하나로 돌려 놓고 VRAM 최소화
+        (BASIC 마저 필요 없으면 flush_all_loras()만 호출)
+        """
+        self.flush_all_loras()
+
+        # BASIC 로드가 안 돼 있으면 다시 올림
+        if basic_name not in self.pipe.adapters["unet"]:
+            self.pipe.load_lora_weights(
+                basic_path,
+                adapter_name=basic_name,
+                torch_dtype=torch.float16
+            )
+        self.pipe.set_adapters([basic_name], [1.0])
 
     def del_lora(self, concept):
 
@@ -118,7 +148,38 @@ class SDXL:
         
         except Exception as e:
             logger.error(f"SDXL_Inpating is failed: {e}")
+    
+    
+    def sdxl_style(self, img_path, concept, weight=2.0):
+        cfg = settings.STYLE_CONFIG[concept]
 
+        # ─ 1) CARTOON(등) 로드 전 VRAM 정리
+        self.switch_to_lora(cfg["lora_path"], cfg["adapter_name"], weight)
+
+        # ─ 2) 추론
+        image      = Image.open(img_path).convert("RGB")
+        mask_image = Image.fromarray(np.ones((image.height, image.width), np.uint8)*255)
+        out = self.pipe(
+            prompt          = cfg["prompt"],
+            prompt_2        = cfg["prompt_2"],
+            negative_prompt = cfg["negative_prompt"],
+            image           = image,
+            mask_image      = mask_image,
+            guidance_scale  = 9.0,
+            num_inference_steps = 20,
+            strength        = 0.7,
+            generator       = torch.Generator("cuda").manual_seed(random.randint(0,100000))
+        ).images[0]
+
+        out.save("./content/temp/style.png")
+
+        # ─ 3) 끝나면 BASIC 하나만 남김 + VRAM 확보
+        self.reset_to_basic(settings.OTT_LORA_PATH, "BASIC")
+        logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
+        del image, mask_image, out
+        clear_cache()
+        return "./content/temp/style.png"
+'''
     def sdxl_style(self, image_path, concept :str = None, lora_weight :float = None):
         try:
             if concept is None:
@@ -201,4 +262,5 @@ class SDXL:
         except Exception as e:
             logger.error(f"sdxl_style is failed: {e}")
             
-            
+        
+'''
