@@ -106,6 +106,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     masks = sam2.run_sam(origin_image_path, boxes)
     mask_image_path = make_mask(masks, labels)
     delete_images(folder_path="./content/temp/masks/")
+    del boxes, labels, origin_image_label, masks
     clear_cache()
 
     # Make Prompt
@@ -116,6 +117,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     # Generate Image
     sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt)
     products = gdino.get_center_coords_by_dino_labels(naver_pairs, sdxl_image_path)
+    del prompt, naver_pairs
     clear_cache()
     
     naver = NaverAPI(raw_items=[], category="decor")
