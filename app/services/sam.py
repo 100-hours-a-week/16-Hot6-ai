@@ -12,9 +12,10 @@ class SAM:
 
     def run_sam(self, path, boxes):
         try:
+            self.sam2_predictor.to("cuda")
             image = Image.open(path).convert("RGB")
             image_source = np.array(image)
-            self.sam2_predictor.set_image(image_source).to("cuda")
+            self.sam2_predictor.set_image(image_source)
 
             with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
                 masks, _, _ = self.sam2_predictor.predict(
