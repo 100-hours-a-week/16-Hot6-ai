@@ -90,53 +90,58 @@ async def classify_image(req: ImageRequest):
 
 # ===== 이미지 생성 파이프라인 =====
 def run_image_generate(image_url: str, concept: str, tmp_filename: str):
-    # Load Variable
-    gdino = GroundingDINO(app.state.processor, app.state.dino)
-    sam2 = SAM(app.state.sam2_predictor)
-    sdxl = SDXL(app.state.pipe)
-    gpt = GPT_API(app.state.gpt_client)
-    esrgan = app.state.esrgan
-    origin_image_path = load_image(image_url)
-    s3 = S3()
-    start_time = time.time()
-    logger.info(f"[START] Image generation for {image_url} with concept {concept}")
-    # Masking & Labeling
-    boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
-    location_info = format_location_info_natural(origin_image_label)
-    masks = sam2.run_sam(origin_image_path, boxes)
-    mask_image_path = make_mask(masks, labels)
-    delete_images(folder_path="./content/temp/masks/")
-    del boxes, labels, origin_image_label, masks
-    clear_cache()
-
-    # Make Prompt
-    generated_prompt = gpt.generate_prompt(settings.SYSTEM_PROMPT, settings.USER_PROMPT, location_info)
-    prompt, naver_pairs = gpt.parse_gpt_output(generated_prompt)
-
-
-    # Generate Image
-    sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt)
-    products = gdino.get_center_coords_by_dino_labels(naver_pairs, sdxl_image_path)
-    del prompt, naver_pairs
-    clear_cache()
-    
-    naver = NaverAPI(raw_items=[], category="decor")
-    products = naver.run_with_coords(products)
-    
-    if concept != "BASIC":
-        sdxl_image_path = sdxl.sdxl_style(sdxl_image_path, concept=concept)
+    try:
+        # Load Variable
+        gdino = GroundingDINO(app.state.processor, app.state.dino)
+        sam2 = SAM(app.state.sam2_predictor)
+        sdxl = SDXL(app.state.pipe)
+        gpt = GPT_API(app.state.gpt_client)
+        esrgan = app.state.esrgan
+        origin_image_path = load_image(image_url)
+        s3 = S3()
+        start_time = time.time()
+        logger.info(f"[START] Image generation for {image_url} with concept {concept}")
+        # Masking & Labeling
+        boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
+        location_info = format_location_info_natural(origin_image_label)
+        masks = sam2.run_sam(origin_image_path, boxes)
+        mask_image_path = make_mask(masks, labels)
+        delete_images(folder_path="./content/temp/masks/")
+        del boxes, labels, origin_image_label, masks
         clear_cache()
 
-    # Image Upscaling
-    result_image_path = upscaling(esrgan, sdxl_image_path)
-    clear_cache()
+        # Make Prompt
+        generated_prompt = gpt.generate_prompt(settings.SYSTEM_PROMPT, settings.USER_PROMPT, location_info)
+        prompt, naver_pairs = gpt.parse_gpt_output(generated_prompt)
 
-    # Upload S3 & Send
-    generated_image_url = s3.save_s3(result_image_path)
-    notify_backend(image_url, generated_image_url, products)
-    del products
-    clear_cache()
-    delete_images()
-    end_time = time.time()
-    logger.info(f"[END] Image generation completed in {end_time - start_time:.2f} seconds")
+
+        # Generate Image
+        sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt)
+        products = gdino.get_center_coords_by_dino_labels(naver_pairs, sdxl_image_path)
+        del prompt, naver_pairs
+        clear_cache()
+        
+        naver = NaverAPI(raw_items=[], category="decor")
+        products = naver.run_with_coords(products)
+        
+        if concept != "BASIC":
+            sdxl_image_path = sdxl.sdxl_style(sdxl_image_path, concept=concept)
+            clear_cache()
+
+        # Image Upscaling
+        result_image_path = upscaling(esrgan, sdxl_image_path)
+        clear_cache()
+
+        # Upload S3 & Send
+        generated_image_url = s3.save_s3(result_image_path)
+        notify_backend(image_url, generated_image_url, products)
+        del products
+        clear_cache()
+        delete_images()
+        end_time = time.time()
+        logger.info(f"[END] Image generation completed in {end_time - start_time:.2f} seconds")
+
+    except Exception as e:
+        logger.error(f"Image Generate Failed: {e}")
+        notify_backend(image_url, generated_image_url=None, products=None)
     
