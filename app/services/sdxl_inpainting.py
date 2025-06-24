@@ -13,34 +13,45 @@ class SDXL:
         self.pipe = pipe
         
 
-    def flush_all_loras(self):
-        """
-        1) disable_lora()           : LoRA 효과 끄기
-        2) unload_lora_weights()    : 어댑터 레지스트리 제거
-        3) lora_layers.clear()      : 실제 weight 텐서 참조 해제
-        4) gc + empty_cache()       : 파이썬·CUDA 캐시 반환
-        """
-        # ─────────────────────────── 1. 적용 끄기
-        if hasattr(self.pipe, "disable_lora"):
-            self.pipe.disable_lora()
+    # def flush_all_loras(self):
+    #     """
+    #     1) disable_lora()           : LoRA 효과 끄기
+    #     2) unload_lora_weights()    : 어댑터 레지스트리 제거
+    #     3) lora_layers.clear()      : 실제 weight 텐서 참조 해제
+    #     4) gc + empty_cache()       : 파이썬·CUDA 캐시 반환
+    #     """
+    #     # ─────────────────────────── 1. 적용 끄기
+    #     if hasattr(self.pipe, "disable_lora"):
+    #         self.pipe.disable_lora()
 
-        # ─────────────────────────── 2. 레지스트리 비우기
-        if hasattr(self.pipe, "unload_lora_weights"):
-            self.pipe.unload_lora_weights()   # 모든 LoRA 이름 사라짐
+    #     # ─────────────────────────── 2. 레지스트리 비우기
+    #     if hasattr(self.pipe, "unload_lora_weights"):
+    #         self.pipe.unload_lora_weights()   # 모든 LoRA 이름 사라짐
 
-        # ─────────────────────────── 3. 텐서 참조 해제
-        for module_name in ("unet", "text_encoder", "text_encoder_2"):
-            mod = getattr(self.pipe, module_name, None)
-            if mod is not None and hasattr(mod, "lora_layers"):
-                mod.lora_layers.clear()  # GPU·RAM 텐서 객체 해제
+    #     # ─────────────────────────── 3. 텐서 참조 해제
+    #     for module_name in ("unet", "text_encoder", "text_encoder_2"):
+    #         mod = getattr(self.pipe, module_name, None)
+    #         if mod is not None and hasattr(mod, "lora_layers"):
+    #             mod.lora_layers.clear()  # GPU·RAM 텐서 객체 해제
 
-        # ─────────────────────────── 4. 캐시 반환
-        gc.collect()
-        torch.cuda.empty_cache()
+    #     # ─────────────────────────── 4. 캐시 반환
+    #     gc.collect()
+    #     torch.cuda.empty_cache()
 
-        alloc = torch.cuda.memory_allocated() / 1024**2
-        resv  = torch.cuda.memory_reserved()  / 1024**2
-        logger.info(f"🧹 LoRA 완전 언로드 | VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
+    #     alloc = torch.cuda.memory_allocated() / 1024**2
+    #     resv  = torch.cuda.memory_reserved()  / 1024**2
+    #     logger.info(f"🧹 LoRA 완전 언로드 | VRAM  Alloc={alloc:.0f}MB  Resv={resv:.0f}MB")
+
+    def del_lora(self, concept):
+
+        components = ["unet", "text_encoder", "text_encoder_2"]
+
+        for component in components:
+            model = getattr(self.pipe, component, None)
+            if model is not None and hasattr(model, "adapters"):
+                if concept in model.adapters:
+                    print(f"Delete Lora")
+                    del model.adapters[concept]
     
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
@@ -119,20 +130,26 @@ class SDXL:
                 generator=generator
             ).images[0]
 
+            self.pipe.delete_adapters(f"{concept}")
+
+            self.del_lora(concept)
+
             #### lora unload(delete) 해주기
             # self.pipe.unload_lora_weights()
             # self.pipe.set_adapters(["BASIC"],[1.0])
             # self.pipe.delete_adapters(CONFIG["adapter_name"])
             # self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
-            self.flush_all_loras()
+            # self.flush_all_loras()
             # self.pipe.disable_lora()
             # self.pipe.unload_lora_weights()
             # 3) lora_layers.clear()
-            for m in (self.pipe.unet,
-                    getattr(self.pipe,"text_encoder",None),
-                    getattr(self.pipe,"text_encoder_2",None)):
-                if m is not None and hasattr(m,"lora_layers"):
-                    m.lora_layers.clear()
+
+            # for m in (self.pipe.unet,
+            #         getattr(self.pipe,"text_encoder",None),
+            #         getattr(self.pipe,"text_encoder_2",None)):
+            #     if m is not None and hasattr(m,"lora_layers"):
+            #         m.lora_layers.clear()
+            
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
             result.save(save_path)
@@ -141,12 +158,12 @@ class SDXL:
             logger.info(f"SDXL Style Change Time: {end_time - middle_time:.2f} seconds")
             logger.info(f"Total Time: {end_time - start_time:.2f} seconds")
             
-            self.pipe.load_lora_weights(
-                settings.OTT_LORA_PATH,
-                torch_dtype=torch.float16,
-                weight_name = "BASIC",
-                adapter_name = "BASIC"
-            )
+            # self.pipe.load_lora_weights(
+            #     settings.OTT_LORA_PATH,
+            #     torch_dtype=torch.float16,
+            #     weight_name = "BASIC",
+            #     adapter_name = "BASIC"
+            # )
             del image, mask_image, result, generator
             clear_cache()
             return save_path
