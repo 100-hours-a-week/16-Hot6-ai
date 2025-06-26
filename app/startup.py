@@ -6,7 +6,7 @@ from RealESRGAN import RealESRGAN
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 import torch
-import os, openai
+import os, openai, gc, time
 
 import logging
 
