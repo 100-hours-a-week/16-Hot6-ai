@@ -44,25 +44,6 @@ def init_models(app):
     )
     pipe.enable_attention_slicing()
     
-    # pipe.enable_sequential_cpu_offload()
-    # pipe.load_lora_weights(
-    #     settings.OIL_PAINTING_LORA_PATH,
-    #     weight_name = os.path.basename(settings.OIL_PAINTING_LORA_PATH),
-    #     adapter_name = "OIL"
-    # )
-
-    # pipe.load_lora_weights(
-    #     settings.SIMPLE_CARTOON_LORA_PATH,
-    #     weight_name = os.path.basename(settings.SIMPLE_CARTOON_LORA_PATH),
-    #     adapter_name = "SIMPLE"
-    # )
-
-    # pipe.load_lora_weights(
-    #     settings.CARTOON_LORA_PATH,
-    #     weight_name = os.path.basename(settings.CARTOON_LORA_PATH),
-    #     adapter_name = "CARTOON"
-    # )
-
     # Real-ESRGAN
     esrgan = RealESRGAN(torch.device('cuda' if torch.cuda.is_available() else 'cpu'), scale=4)
     esrgan.load_weights(settings.UPSCALIER_PATH, download=True)
@@ -75,3 +56,37 @@ def init_models(app):
     app.state.esrgan = esrgan
     
     logger.info("Model Initialized and Loaded to GPU")
+
+def reload_model_if_needed(app):
+    """기존 모델 언로드 + 새로 로드하여 app.state.pipe 교체"""
+    if hasattr(app.state, "pipe") and app.state.pipe:
+        # GPU 메모리 해제
+        old_pipe = app.state.pipe
+        del app.state.pipe, old_pipe
+        gc.collect()
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+        logger.info("[MODEL] old pipeline freed")
+
+    app.state.pipe = _build_pipeline()
+    app.state.last_model_reload = time.time()
+    logger.info("[MODEL] new pipeline loaded")
+
+# ──────────────────────────────────────────────
+def _build_pipeline():
+    pipe = DiffusionPipeline.from_pretrained(
+        settings.BASE_MODEL_PATH, torch_dtype=torch.float16,
+        use_safetensors=True).to("cuda")
+
+    pipe.vae = AutoencoderKL.from_single_file(
+        settings.VAE_PATH, torch_dtype=torch.float16).to("cuda")
+
+    pipe.load_lora_weights(
+        settings.OTT_LORA_PATH,
+        adapter_name="BASIC",
+        weight_name=os.path.basename(settings.OTT_LORA_PATH),
+        torch_dtype=torch.float16,
+    )
+    pipe.set_adapters(["BASIC"], [1.0])
+    pipe.enable_attention_slicing()
+    return pipe
