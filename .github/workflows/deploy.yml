@@ -41,18 +41,20 @@ jobs:
 
       - name: Git Pull and Restart AI Service
         run: |
-          ssh -F ~/.ssh/config ai-dev-server <<'EOF'
+          BRANCH=${{ github.ref_name }}
+      
+          ssh -F ~/.ssh/config ai-dev-server <<EOF
             set -eux
             cd ~/ai-server
             git fetch origin
-            git reset --hard origin/dev
-            git clean -fdx -e venv/ -e .env
+            git reset --hard origin/${BRANCH}
+            git clean -fdx -e venv/ -e .env -e config.yaml
             sudo systemctl daemon-reload
             sudo systemctl restart ai.service
-
+      
             echo "⏳ Waiting 10 seconds for ai.service to stabilize..."
             sleep 10
-
+      
             echo "📋 Checking status of ai.service..."
             if systemctl is-active --quiet ai.service; then
               echo "✅ ai.service is running successfully."

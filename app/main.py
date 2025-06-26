@@ -1,20 +1,25 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import requests, os, threading
-import logging
+import requests, os, threading, logging, time
 from shutdown import shutdown_event
-from services.img2txt import ImageToText
-from services.txt2img import TextToImage
+from services.groundig_dino import GroundingDINO
+from services.sdxl_inpainting import SDXL
+from services.sam import SAM
 from services.naverapi import NaverAPI
 from services.backend_notify import notify_backend
+from services.masking import make_mask
 from utils.s3 import S3
+from utils.load_image import load_image
 from utils.clear_cache import clear_cache
-from utils.queue_manager import task_queue
+from utils.queue_manager import task_queue, queue_size
+from utils.upscaling import upscaling
+from utils.mapping import format_location_info_natural
+from utils.delete_image import delete_images
 from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
-from routers import healthcheck
-from routers import info
+from routers import healthcheck, info
+from startup import reload_model_if_needed
 
 app = FastAPI()
 # healthcheck
@@ -28,9 +33,18 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+RELOAD_INTERVAL = 3
+IDLE_LIMIT = 10 * 60
+
 @app.on_event("startup")
 def startup_event():
     init_models(app)
+    app.state.jobs_since_reload = 0
+    app.state.last_job_time = time.time()
+    
+    app.state.reload_lock = threading.Lock()
+    
+    threading.Thread(target=idle_watcher, daemon=True).start()
     threading.Thread(target=image_worker, daemon=True).start()
 
 @app.on_event("shutdown")
@@ -38,26 +52,53 @@ def shutdown_gpu():
     shutdown_event(app)
 
 
+# ------ 모델 로드 공용 함수 ------
+def reload_models():
+    with app.state.reload_lock:
+        logger.info("[Model] Reloading models...")
+        reload_model_if_needed(app)
+        app.state.jobs_since_reload = 0
+        app.state.last_job_time = time.time()
+        logger.info("[Model] Reload completed")
+
+
 # ===== Queue 기반 직렬 실행 설정 =====
 
 def image_worker():
     while True:
-        image_url, tmp_filename = task_queue.get()
+        image_url, concept, tmp_filename = task_queue.get()
         try:
-            run_image_generate(image_url, tmp_filename)
+            logger.info(f"[WORKER] Queue before pop : {queue_size()+1}")
+            run_image_generate(image_url, concept, tmp_filename)
         except Exception as e:
-            print(f"[ERROR] Image task failed: {e}")
+            logger.exception(f"[ERROR] Image task failed: {e}")
         finally:
             task_queue.task_done()
+        
+        # 3 건마다 자동 모델 리로드
+        app.state.jobs_since_reload += 1
+        app.state.last_job_time = time.time()
+        if app.state.jobs_since_reload >= RELOAD_INTERVAL:
+            reload_models()
+
+def idle_watcher():
+    while True:
+        time.sleep(30)
+        if (task_queue.qsize() == 0 and
+            time.time() - app.state.last_job_time > IDLE_LIMIT):
+            reload_models()
+
 
 # ===== FastAPI 요청 모델 =====
 class ImageRequest(BaseModel):
     initial_image_url: str
+    concept: str
 
 @app.post("/classify")
 async def classify_image(req: ImageRequest):
     image_url = req.initial_image_url
-    tmp_filename = "tmp.jpg"
+    os.makedirs("./content/temp", exist_ok=True)
+    tmp_filename = "./content/temp/tmp.png"
 
     with open(tmp_filename, "wb") as f:
         f.write(requests.get(image_url).content)
@@ -73,9 +114,7 @@ async def classify_image(req: ImageRequest):
             "classify": "false"
         }
 
-    # 작업 큐에 넣고 순차 처리
-    task_queue.put((image_url, tmp_filename))
-    #print("[DEBUG] Queue 처리, MVP이후 번호 넣을 수 있으면 넣어보기")
+    task_queue.put((image_url, req.concept, tmp_filename))
 
     return {
         "initial_image_url": image_url,
@@ -83,37 +122,59 @@ async def classify_image(req: ImageRequest):
     }
 
 # ===== 이미지 생성 파이프라인 =====
-def run_image_generate(image_url: str, tmp_filename: str):
+def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     try:
-        img2txt = ImageToText(app.state.blip_model, app.state.processor)
-        caption  = img2txt.generate_text(image_url)
-        if not caption:
-            raise ValueError("[Error] Caption is None.")
-        
-        generate_prompt_gpt = GPT_API(app.state.gpt_client)
-        prompt, item_list = generate_prompt_gpt.generate_prompt(caption)
-        clear_cache()
-        
-        txt2img = TextToImage(app.state.pipe)
-        image = txt2img.generate_image(prompt)
+        # Load Variable
+        gdino = GroundingDINO(app.state.processor, app.state.dino)
+        sam2 = SAM(app.state.sam2_predictor)
+        sdxl = SDXL(app.state.pipe)
+        gpt = GPT_API(app.state.gpt_client)
+        esrgan = app.state.esrgan
+        origin_image_path = load_image(image_url)
         s3 = S3()
-        generated_image_url = s3.save_s3(image)
+        start_time = time.time()
+        logger.info(f"[START] Image generation for {image_url} with concept {concept}")
+        # Masking & Labeling
+        boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
+        location_info = format_location_info_natural(origin_image_label)
+        masks = sam2.run_sam(origin_image_path, boxes)
+        mask_image_path = make_mask(masks, labels)
+        delete_images(folder_path="./content/temp/masks/")
+        del boxes, labels, origin_image_label, masks
         clear_cache()
 
-        naver = NaverAPI(item_list)
-        products = naver.run()
+        # Make Prompt
+        generated_prompt = gpt.generate_prompt(settings.SYSTEM_PROMPT, settings.USER_PROMPT, location_info)
+        prompt, naver_pairs = gpt.parse_gpt_output(generated_prompt)
 
+
+        # Generate Image
+        sdxl_image_path = sdxl.sdxl_inpainting(origin_image_path, mask_image_path, prompt)
+        products = gdino.get_center_coords_by_dino_labels(naver_pairs, sdxl_image_path)
+        del prompt, naver_pairs
+        clear_cache()
+        
+        naver = NaverAPI(raw_items=[], category="decor")
+        products = naver.run_with_coords(products)
+        
+        if concept != "BASIC":
+            sdxl_image_path = sdxl.sdxl_style(sdxl_image_path, concept=concept)
+            clear_cache()
+
+        # Image Upscaling
+        result_image_path = upscaling(esrgan, sdxl_image_path)
+        clear_cache()
+
+        # Upload S3 & Send
+        generated_image_url = s3.save_s3(result_image_path)
         notify_backend(image_url, generated_image_url, products)
+        del products
+        clear_cache()
+        delete_images()
+        end_time = time.time()
+        logger.info(f"[END] Image generation completed in {end_time - start_time:.2f} seconds")
 
     except Exception as e:
-        logger.error(f"Exception during image generate pipeline: {e}")
-        notify_backend(image_url)
-
-    finally:
-        if os.path.exists(tmp_filename):
-            os.remove(tmp_filename)
-            logger.info("임시 파일 삭제 완료")
-
-        clear_cache()
-        logger.info("VRAM cache 삭제 완료")
-        
+        logger.error(f"Image Generate Failed: {e}")
+        generated_image_url = None
+        notify_backend(image_url, generated_image_url=None, products=None)
