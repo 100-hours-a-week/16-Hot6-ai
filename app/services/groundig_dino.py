@@ -17,6 +17,7 @@ class GroundingDINO:
         if txt is None:
             txt = "monitor. keyboard. mouse. laptop. speaker."
         try:
+            self.dino.to("cuda")
             image = Image.open(path).convert("RGB")
             inputs = self.processor(images=image, text=txt, return_tensors="pt").to("cuda")
 
@@ -43,6 +44,7 @@ class GroundingDINO:
                 label_to_centers[label].append((cx, cy))
 
             logger.info(f"Detected Object: {labels}")
+            self.dino.to("cpu")
             del inputs, outputs, results, image
 
             return boxes, labels, label_to_centers
@@ -52,6 +54,7 @@ class GroundingDINO:
 
     def labeling(self, labels, image_path):
         try:
+            
             txt = ". ".join(labels) + "."
             image = Image.open(image_path)
 

@@ -74,12 +74,12 @@ class SDXL:
             logger.info(f"Load lora: {CONFIG['adapter_name']} with weight: {lora_weight}")
             
             # LoRA Load
-            self.pipe.load_lora_weights(
-                CONFIG["lora_path"],
-                torch_dtype=torch.float16,
-                weight_name = CONFIG["adapter_name"],
-                adapter_name = CONFIG["adapter_name"]
-            )
+            # self.pipe.load_lora_weights(
+            #     CONFIG["lora_path"],
+            #     torch_dtype=torch.float16,
+            #     weight_name = CONFIG["adapter_name"],
+            #     adapter_name = CONFIG["adapter_name"]
+            # )
             middle_time = time.time()
             logger.info(f"LoRA Load Time: {middle_time - start_time:.2f} seconds")
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
@@ -101,9 +101,9 @@ class SDXL:
                 generator=generator
             ).images[0]
 
-            self.pipe.delete_adapters(f"{concept}")
+            # self.pipe.disable_lora(f"{concept}")
             
-            self.del_lora(concept)
+            # self.del_lora(concept)
 
             # self.flush_all_loras()
             

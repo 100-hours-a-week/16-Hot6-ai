@@ -75,11 +75,11 @@ def image_worker():
         finally:
             task_queue.task_done()
         
-        # 3 건마다 자동 모델 리로드
-        app.state.jobs_since_reload += 1
-        app.state.last_job_time = time.time()
-        if app.state.jobs_since_reload >= RELOAD_INTERVAL:
-            reload_models()
+        # # 3 건마다 자동 모델 리로드
+        # app.state.jobs_since_reload += 1
+        # app.state.last_job_time = time.time()
+        # if app.state.jobs_since_reload >= RELOAD_INTERVAL:
+        #     reload_models()
 
 def idle_watcher():
     while True:

@@ -72,13 +72,13 @@ class Settings:
             "prompt_2": PROMPT_CONFIG.get("oil_prompt_2", ""),
             "negative_prompt": PROMPT_CONFIG.get("oil_negative_prompt", ""),
         },
-        "CARTOON": {
-            "lora_path": CARTOON_LORA_PATH,
-            "adapter_name": "CARTOON",
-            "prompt": PROMPT_CONFIG.get("cartoon_prompt", ""),
-            "prompt_2": PROMPT_CONFIG.get("cartoon_prompt_2", ""),
-            "negative_prompt": PROMPT_CONFIG.get("cartoon_negative_prompt", ""),
-        }
+        # "CARTOON": {
+        #     "lora_path": CARTOON_LORA_PATH,
+        #     "adapter_name": "CARTOON",
+        #     "prompt": PROMPT_CONFIG.get("cartoon_prompt", ""),
+        #     "prompt_2": PROMPT_CONFIG.get("cartoon_prompt_2", ""),
+        #     "negative_prompt": PROMPT_CONFIG.get("cartoon_negative_prompt", ""),
+        # }
     }
     
     # 기타 설정 / 추후 추가 필요

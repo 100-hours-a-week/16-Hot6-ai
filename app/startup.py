@@ -17,7 +17,7 @@ def init_models(app):
     dino_model_path = settings.DINO_MODEL_PATH
 
     processor = AutoProcessor.from_pretrained(dino_model_path)
-    dino = AutoModelForZeroShotObjectDetection.from_pretrained(dino_model_path).to("cuda")
+    dino = AutoModelForZeroShotObjectDetection.from_pretrained(dino_model_path).to("cpu")
     # SAM 2.1
     sam2_model = build_sam2(settings.SAM2_CONFIG_PATH, settings.SAM2_CHECKPOINT_PATH, device="cuda")
     sam2_predictor = SAM2ImagePredictor(sam2_model)
@@ -42,6 +42,28 @@ def init_models(app):
         weight_name = os.path.basename(settings.OTT_LORA_PATH),
         adapter_name = "BASIC"
     )
+    
+    pipe.load_lora_weights(
+        settings.MSPAINT_LORA_PATH,
+        adapter_name="MSPAINT",
+        weight_name=os.path.basename(settings.MSPAINT_LORA_PATH),
+        torch_dtype=torch.float16
+    )
+    
+    pipe.load_lora_weights(
+        settings.SIMPLE_CARTOON_LORA_PATH,
+        adapter_name="SIMPLE",
+        weight_name=os.path.basename(settings.SIMPLE_CARTOON_LORA_PATH),
+        torch_dtype=torch.float16
+    )
+    
+    pipe.load_lora_weights(
+        settings.OIL_PAINTING_LORA_PATH,
+        adapter_name="OIL",
+        weight_name=os.path.basename(settings.OIL_PAINTING_LORA_PATH),
+        torch_dtype=torch.float16
+    )
+    
     pipe.enable_attention_slicing()
     
     # Real-ESRGAN
