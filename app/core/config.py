@@ -53,28 +53,28 @@ class Settings:
     STYLE_CONFIG = {
         "MSPAINT": {
             "lora_path": MSPAINT_LORA_PATH,
-            "adapter_name": "MSPAINT",
+            "adapter_name": "STYLE",
             "prompt": PROMPT_CONFIG.get("mspaint_prompt", ""),
             "prompt_2": PROMPT_CONFIG.get("mspaint_prompt_2", ""),
             "negative_prompt": PROMPT_CONFIG.get("mspaint_negative_prompt", ""),
         },
         "SIMPLE": {
             "lora_path": SIMPLE_CARTOON_LORA_PATH,
-            "adapter_name": "SIMPLE",
+            "adapter_name": "STYLE",
             "prompt": PROMPT_CONFIG.get("simple_prompt", ""),
             "prompt_2": PROMPT_CONFIG.get("simple_prompt_2", ""),
             "negative_prompt": PROMPT_CONFIG.get("simple_negative_prompt", ""),
         },
         "OIL": {
             "lora_path": OIL_PAINTING_LORA_PATH,
-            "adapter_name": "OIL",
+            "adapter_name": "STYLE",
             "prompt": PROMPT_CONFIG.get("oil_prompt", ""),
             "prompt_2": PROMPT_CONFIG.get("oil_prompt_2", ""),
             "negative_prompt": PROMPT_CONFIG.get("oil_negative_prompt", ""),
         },
         "CARTOON": {
             "lora_path": CARTOON_LORA_PATH,
-            "adapter_name": "CARTOON",
+            "adapter_name": "STYLE",
             "prompt": PROMPT_CONFIG.get("cartoon_prompt", ""),
             "prompt_2": PROMPT_CONFIG.get("cartoon_prompt_2", ""),
             "negative_prompt": PROMPT_CONFIG.get("cartoon_negative_prompt", ""),

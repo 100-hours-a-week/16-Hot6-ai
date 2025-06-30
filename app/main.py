@@ -19,7 +19,6 @@ from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
 from routers import healthcheck, info
-from startup import reload_model_if_needed
 
 app = FastAPI()
 # healthcheck
@@ -33,33 +32,17 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-RELOAD_INTERVAL = 3
-IDLE_LIMIT = 10 * 60
+# RELOAD_INTERVAL = 3
+# IDLE_LIMIT = 10 * 60
 
 @app.on_event("startup")
 def startup_event():
     init_models(app)
-    app.state.jobs_since_reload = 0
-    app.state.last_job_time = time.time()
-    
-    app.state.reload_lock = threading.Lock()
-    
-    threading.Thread(target=idle_watcher, daemon=True).start()
     threading.Thread(target=image_worker, daemon=True).start()
 
 @app.on_event("shutdown")
 def shutdown_gpu():
     shutdown_event(app)
-
-
-# ------ 모델 로드 공용 함수 ------
-def reload_models():
-    with app.state.reload_lock:
-        logger.info("[Model] Reloading models...")
-        reload_model_if_needed(app)
-        app.state.jobs_since_reload = 0
-        app.state.last_job_time = time.time()
-        logger.info("[Model] Reload completed")
 
 
 # ===== Queue 기반 직렬 실행 설정 =====
@@ -75,19 +58,6 @@ def image_worker():
         finally:
             task_queue.task_done()
         
-        # 3 건마다 자동 모델 리로드
-        app.state.jobs_since_reload += 1
-        app.state.last_job_time = time.time()
-        if app.state.jobs_since_reload >= RELOAD_INTERVAL:
-            reload_models()
-
-def idle_watcher():
-    while True:
-        time.sleep(30)
-        if (task_queue.qsize() == 0 and
-            time.time() - app.state.last_job_time > IDLE_LIMIT):
-            reload_models()
-
 
 # ===== FastAPI 요청 모델 =====
 class ImageRequest(BaseModel):
