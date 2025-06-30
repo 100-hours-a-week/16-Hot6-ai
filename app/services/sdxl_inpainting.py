@@ -77,8 +77,7 @@ class SDXL:
             self.pipe.load_lora_weights(
                 CONFIG["lora_path"],
                 torch_dtype=torch.float16,
-                weight_name = CONFIG["adapter_name"],
-                adapter_name = CONFIG["adapter_name"]
+                adapter_name = "STYLE"
             )
             middle_time = time.time()
             logger.info(f"LoRA Load Time: {middle_time - start_time:.2f} seconds")
@@ -87,7 +86,7 @@ class SDXL:
             mask_image = Image.fromarray(np.ones((image.height, image.width), dtype=np.uint8) * 255)
             generator = torch.Generator(device="cuda").manual_seed(random.randint(0, 100000))
 
-            self.pipe.set_adapters([CONFIG["adapter_name"]], [lora_weight])
+            self.pipe.set_adapters(["STYLE"], [lora_weight])
 
             result = self.pipe(
                 prompt = CONFIG["prompt"],
@@ -101,9 +100,9 @@ class SDXL:
                 generator=generator
             ).images[0]
 
-            self.pipe.delete_adapters(f"{concept}")
+            self.pipe.delete_adapters("STYLE")
             
-            self.del_lora(concept)
+            # self.del_lora(concept)
 
             # self.flush_all_loras()
             
