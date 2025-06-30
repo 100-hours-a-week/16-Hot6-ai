@@ -11,18 +11,6 @@ logger = logging.getLogger(__name__)
 class SDXL:
     def __init__(self, pipe):
         self.pipe = pipe
-
-    def del_lora(self, concept):
-
-        components = ["unet", "text_encoder", "text_encoder_2"]
-        self.pipe.disable_lora()
-        for component in components:
-            model = getattr(self.pipe, component, None)
-            if model is not None and hasattr(model, "adapters"):
-                if concept in model.adapters:
-                    print(f"Delete Lora")
-                    del model.adapters[concept]
-    
     
     def sdxl_inpainting(self, origin_image, mask_image, prompt, prompt_2: str = None, negative_prompt: str = None):
         try:
@@ -37,7 +25,6 @@ class SDXL:
             generator = torch.Generator(device = "cuda").manual_seed(random.randint(0, 100000))
 
             self.pipe.set_adapters(["BASIC"], [1.0])
-            #self.pipe.fuse_lora()
             
             result = self.pipe(
                 prompt = prompt,
@@ -76,9 +63,7 @@ class SDXL:
             # LoRA Load
             self.pipe.load_lora_weights(
                 CONFIG["lora_path"],
-                torch_dtype=torch.float16,
-                weight_name = CONFIG["adapter_name"],
-                adapter_name = CONFIG["adapter_name"]
+                adapter_name = CONFIG['adapter_name']
             )
             middle_time = time.time()
             logger.info(f"LoRA Load Time: {middle_time - start_time:.2f} seconds")
@@ -87,7 +72,7 @@ class SDXL:
             mask_image = Image.fromarray(np.ones((image.height, image.width), dtype=np.uint8) * 255)
             generator = torch.Generator(device="cuda").manual_seed(random.randint(0, 100000))
 
-            self.pipe.set_adapters([CONFIG["adapter_name"]], [lora_weight])
+            self.pipe.set_adapters([CONFIG['adapter_name']], [lora_weight])
 
             result = self.pipe(
                 prompt = CONFIG["prompt"],
@@ -101,29 +86,7 @@ class SDXL:
                 generator=generator
             ).images[0]
 
-            self.pipe.delete_adapters(f"{concept}")
-            
-            self.del_lora(concept)
-
-            # self.flush_all_loras()
-            
-            # self.remove_lora(CONFIG["adapter_name"])
-            
-            #### lora unload(delete) 해주기
-            # self.pipe.unload_lora_weights()
-            # self.pipe.set_adapters(["BASIC"],[1.0])
-            # self.pipe.delete_adapters(CONFIG["adapter_name"])
-            # self.pipe.set_lora_device([CONFIG["adapter_name"]], "cpu")
-            # self.flush_all_loras()
-            # self.pipe.disable_lora()
-            # self.pipe.unload_lora_weights()
-            # 3) lora_layers.clear()
-
-            # for m in (self.pipe.unet,
-            #         getattr(self.pipe,"text_encoder",None),
-            #         getattr(self.pipe,"text_encoder_2",None)):
-            #     if m is not None and hasattr(m,"lora_layers"):
-            #         m.lora_layers.clear()
+            self.pipe.delete_adapters(CONFIG['adapter_name'])
             
             logger.info(f"pipe LoRA list : {self.pipe.get_list_adapters()}")
             save_path = "./content/temp/style.png"
