@@ -19,6 +19,11 @@ class Settings:
     NAVER_CLIENT_ID: str = os.getenv("NAVER_CLIENT_ID", "")
     NAVER_CLIENT_SECRET: str = os.getenv("NAVER_CLIENT_SECRET", "")
 
+    # Redis 키
+    REDIS_SENTINEL_NODES: str = os.getenv("REDIS_SENTINEL_NODES", "")
+    REDIS_MASTER_NAME: str = os.getenv("REDIS_MASTER_NAME", "")
+    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD", "")
+
     # 모델 경로
     CNN_MODEL: str = os.getenv("CNN_MODEL", "")
     BLIP_MODEL_PATH: str = os.getenv("BLIP_MODEL_PATH", "")

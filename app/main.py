@@ -6,7 +6,7 @@ from services.groundig_dino import GroundingDINO
 from services.sdxl_inpainting import SDXL
 from services.sam import SAM
 from services.naverapi import NaverAPI
-from services.backend_notify import notify_backend
+# from services.backend_notify import notify_backend
 from services.masking import make_mask
 from utils.s3 import S3
 from utils.load_image import load_image
@@ -15,6 +15,7 @@ from utils.queue_manager import task_queue, queue_size
 from utils.upscaling import upscaling
 from utils.mapping import format_location_info_natural
 from utils.delete_image import delete_images
+from utils.redis import RedisSentinel
 from services.gpt_api import GPT_API
 from startup import init_models
 from core.config import settings
@@ -38,7 +39,8 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 def startup_event():
     init_models(app)
-    threading.Thread(target=image_worker, daemon=True).start()
+    redis = RedisSentinel()
+    threading.Thread(target=image_worker, args=(redis,), daemon=True).start()
 
 @app.on_event("shutdown")
 def shutdown_gpu():
@@ -47,16 +49,19 @@ def shutdown_gpu():
 
 # ===== Queue 기반 직렬 실행 설정 =====
 
-def image_worker():
+def image_worker(redis_client: RedisSentinel):
     while True:
-        image_url, concept, tmp_filename = task_queue.get()
-        try:
-            logger.info(f"[WORKER] Queue before pop : {queue_size()+1}")
-            run_image_generate(image_url, concept, tmp_filename)
-        except Exception as e:
-            logger.exception(f"[ERROR] Image task failed: {e}")
-        finally:
-            task_queue.task_done()
+        image_url, concept = redis_client.pop_original_image()
+        if image_url and concept:
+            try:
+                logger.info(f"Get Queue Success : {image_url}, {concept}")
+                run_image_generate(image_url, concept, redis_client)
+            except Exception as e:
+                logger.error(f"Image task failed: {e}")
+        else:
+            logger.error("Image url or Concept is None, skipping task.")
+        # finally:
+        #     task_queue.task_done()
         
 
 # ===== FastAPI 요청 모델 =====
@@ -64,35 +69,35 @@ class ImageRequest(BaseModel):
     initial_image_url: str
     concept: str
 
-@app.post("/classify")
-async def classify_image(req: ImageRequest):
-    image_url = req.initial_image_url
-    os.makedirs("./content/temp", exist_ok=True)
-    tmp_filename = "./content/temp/tmp.png"
+# @app.post("/classify")
+# async def classify_image(req: ImageRequest):
+#     image_url = req.initial_image_url
+#     os.makedirs("./content/temp", exist_ok=True)
+#     tmp_filename = "./content/temp/tmp.png"
 
-    with open(tmp_filename, "wb") as f:
-        f.write(requests.get(image_url).content)
+#     with open(tmp_filename, "wb") as f:
+#         f.write(requests.get(image_url).content)
 
-    from services.desk_classify import Desk_classifier
-    classifier = Desk_classifier()
-    is_desk = classifier.predict(tmp_filename)
+#     from services.desk_classify import Desk_classifier
+#     classifier = Desk_classifier()
+#     is_desk = classifier.predict(tmp_filename)
 
-    if not is_desk:
-        os.remove(tmp_filename)
-        return {
-            "initial_image_url": image_url,
-            "classify": "false"
-        }
+#     if not is_desk:
+#         os.remove(tmp_filename)
+#         return {
+#             "initial_image_url": image_url,
+#             "classify": "false"
+#         }
 
-    task_queue.put((image_url, req.concept, tmp_filename))
+#     task_queue.put((image_url, req.concept, tmp_filename))
 
-    return {
-        "initial_image_url": image_url,
-        "classify": "true",
-    }
+#     return {
+#         "initial_image_url": image_url,
+#         "classify": "true",
+#     }
 
 # ===== 이미지 생성 파이프라인 =====
-def run_image_generate(image_url: str, concept: str, tmp_filename: str):
+def run_image_generate(image_url: str, concept: str, redis_client: RedisSentinel):
     try:
         # Load Variable
         gdino = GroundingDINO(app.state.processor, app.state.dino)
@@ -104,6 +109,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
         s3 = S3()
         start_time = time.time()
         logger.info(f"[START] Image generation for {image_url} with concept {concept}")
+        
         # Masking & Labeling
         boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
         location_info = format_location_info_natural(origin_image_label)
@@ -137,7 +143,7 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
 
         # Upload S3 & Send
         generated_image_url = s3.save_s3(result_image_path)
-        notify_backend(image_url, generated_image_url, products)
+        redis_client.push_completed_image(image_url, generated_image_url, products)
         del products
         clear_cache()
         delete_images()
@@ -147,4 +153,4 @@ def run_image_generate(image_url: str, concept: str, tmp_filename: str):
     except Exception as e:
         logger.error(f"Image Generate Failed: {e}")
         generated_image_url = None
-        notify_backend(image_url, generated_image_url=None, products=None)
+        redis_client.push_completed_image(image_url, generated_image_url=None, products=None)
