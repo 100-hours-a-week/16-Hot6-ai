@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import requests, os, threading, logging, time
+import redis
 from shutdown import shutdown_event
 from services.groundig_dino import GroundingDINO
 from services.sdxl_inpainting import SDXL
@@ -51,15 +52,23 @@ def shutdown_gpu():
 
 def image_worker(redis_client: RedisSentinel):
     while True:
-        image_url, concept = redis_client.pop_original_image()
-        if image_url:
-            try:
-                logger.info(f"Get Queue Success : {image_url}, {concept}")
-                run_image_generate(image_url, concept, redis_client)
-            except Exception as e:
-                logger.error(f"Image task failed: {e}")
-        else:
-            logger.error("Image url is None, skipping task.")
+        try:
+            image_url, concept = redis_client.pop_original_image()
+            if image_url:
+                try:
+                    logger.info(f"Get Queue Success : {image_url}, {concept}")
+                    run_image_generate(image_url, concept, redis_client)
+                except Exception as e:
+                    logger.error(f"Image task failed: {e}")
+            else:
+                logger.error("Image url is None, skipping task.")
+        except redis.exceptions.TimeoutError as e:
+            logger.error(f"Redis Timeout Error: {e}")
+            logger.warning("[Redis Timeout] Reconnecting to Redis Sentinel...")
+            time.sleep(1)
+            redis_client = RedisSentinel()
+        except Exception as e:
+            logger.error(f"Unexpected error in worker thread: {e}")
         # finally:
         #     task_queue.task_done()
         
