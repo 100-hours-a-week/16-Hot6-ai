@@ -52,22 +52,22 @@ def shutdown_gpu():
 def image_worker(redis_client: RedisSentinel):
     while True:
         image_url, concept = redis_client.pop_original_image()
-        if image_url and concept:
+        if image_url:
             try:
                 logger.info(f"Get Queue Success : {image_url}, {concept}")
                 run_image_generate(image_url, concept, redis_client)
             except Exception as e:
                 logger.error(f"Image task failed: {e}")
         else:
-            logger.error("Image url or Concept is None, skipping task.")
+            logger.error("Image url is None, skipping task.")
         # finally:
         #     task_queue.task_done()
         
 
 # ===== FastAPI 요청 모델 =====
-class ImageRequest(BaseModel):
-    initial_image_url: str
-    concept: str
+# class ImageRequest(BaseModel):
+#     initial_image_url: str
+#     concept: str
 
 # @app.post("/classify")
 # async def classify_image(req: ImageRequest):
@@ -109,7 +109,7 @@ def run_image_generate(image_url: str, concept: str, redis_client: RedisSentinel
         s3 = S3()
         start_time = time.time()
         logger.info(f"[START] Image generation for {image_url} with concept {concept}")
-        
+
         # Masking & Labeling
         boxes, labels, origin_image_label = gdino.run_dino(origin_image_path)
         location_info = format_location_info_natural(origin_image_label)
