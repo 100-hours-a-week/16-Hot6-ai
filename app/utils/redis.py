@@ -31,10 +31,10 @@ class RedisSentinel:
             "products": products
         }
         json_data = json.dumps(payload)
-        self.redis.rpush("completed_images", json_data)
+        self.redis.rpush("completed:images", json_data)
 
     def pop_original_image(self):
-        data = self.redis.blpop("original_images", timeout=0)
+        data = self.redis.blpop("original:images", timeout=0)
         if data:
             _, json_data = data
             try:
