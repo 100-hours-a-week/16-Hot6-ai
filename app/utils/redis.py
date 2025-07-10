@@ -12,14 +12,14 @@ class RedisSentinel:
         sentinel = Sentinel(
             [(host, int(port)) for host, port in
             (node.strip().split(":") for node in settings.REDIS_SENTINEL_NODES.split(","))],
-            socket_timeout=0.5,
+            socket_timeout=10,
             password=redis_password,
             sentinel_kwargs={"password": redis_password}
         )
 
         self.redis = sentinel.master_for(
             settings.REDIS_MASTER_NAME,
-            socket_timeout=0.5,
+            socket_timeout=60,
             password=redis_password,
             decode_responses=True
         )
