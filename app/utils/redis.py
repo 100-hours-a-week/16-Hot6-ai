@@ -28,7 +28,7 @@ class RedisSentinel:
         self.stream_key = "original:images"
         self.group_name = "gpu_group"
 
-        start_id = uuid.uuid4().hex
+        start_id = 0
 
         try:
             self.redis.xgroup_create(
@@ -45,7 +45,7 @@ class RedisSentinel:
                 logger.error(f"Error creating Redis stream group: {e}")
                 raise
         
-        self.consumer_name = start_id
+        self.consumer_name = uuid.uuid4().hex
 
     def push_completed_image(self, image_url: str, generated_image_url: str = None, products: list[dict] = None) -> None:
         prouducts_list = products if isinstance(products, list) else []
