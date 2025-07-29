@@ -50,9 +50,7 @@ def shutdown_gpu():
 
 # ===== Queue 기반 직렬 실행 설정 =====
 
-def image_worker():
-    redis_client = RedisSentinel()
-    
+def image_worker(redis_client: RedisSentinel):
     while True:
         try:
             image_url, concept = redis_client.pop_original_image()
