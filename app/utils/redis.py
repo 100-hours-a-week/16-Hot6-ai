@@ -1,6 +1,7 @@
 from redis.sentinel import Sentinel
 from core.config import settings
 import json
+import uuid
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,51 +25,67 @@ class RedisSentinel:
             decode_responses=True
         )
 
+        self.stream_key = "original:images"
+        self.group_name = "gpu_group"
+
+        start_id = uuid.uuid4().hex
+
+        try:
+            self.redis.xgroup_create(
+                name = self.stream_key,
+                groupname = self.group_name,
+                id = start_id,
+                mkstream = True
+            )
+            logger.info(f"Created Redis stream group: {self.group_name} with start ID: {start_id}")
+        except self.redis.ResponseError as e:
+            if "BUSYGROUP" in str(e):
+                logger.info(f"Redis stream group {self.group_name} already exists, skipping creation.")
+            else:
+                logger.error(f"Error creating Redis stream group: {e}")
+                raise
+        
+        self.consumer_name = start_id
+
     def push_completed_image(self, image_url: str, generated_image_url: str = None, products: list[dict] = None) -> None:
-        payload = {
-            "initial_image_url": image_url,
-            "processed_image_url": generated_image_url,
-            "products": products
-        }
+        prouducts_list = products if isinstance(products, list) else []
 
         fields = {
-            "initial_image_url": payload["initial_image_url"],
-            "processed_image_url": payload.get("processed_image_url"),
-            "products": json.dumps(payload["products"]) if payload.get("products") is not None else ""
+            "initial_image_url": image_url,
+            "processed_image_url": generated_image_url,
+            "products": json.dumps(prouducts_list)
         }
-        
-        self.redis.xadd(
-            name="completed:images",
-            fields=fields,
-            id="*",
-            maxlen=1000,
-            approximate=True
+
+        completed_stream_key = "completed:images"
+
+        new_id = self.redis.xadd(
+            name = completed_stream_key,
+            fields = fields,
+            id = "*",
+            maxlen = 1000,
+            approximate = True
         )
 
     def pop_original_image(self):
-        entries = self.redis.xread({"original:images": "0"}, count=1, block=0)
-        if entries:
-            _, messages = entries[0]
-            msg_id, fields = messages[0]
+        resp = self.redis.xreadgroup(
+            groupname = self.group_name,
+            consumername = self.consumer_name,
+            streams = {self.stream_key: ">"},
+            count = 1,
+            block = 0
+        )
 
-            data = {
-                (k.decode() if isinstance(k, (bytes, bytearray)) else k):
-                (v.decode() if isinstance(v, (bytes, bytearray)) else v)
-                for k, v in fields.items()
-            }
+        if not resp:
+            return None, None
+        
+        _, messages = resp[0]
+        msg_id, fields = messages[0]
 
-            logger.info(f"Pop original image: {msg_id}")
-            return data.get("initial_image_url"), data.get("concept")
-        # data = self.redis.blpop("original:images", timeout=0)
-        # if data:
-        #     _, json_data = data
-        #     try:
-        #         parsed = json.loads(json_data)
-        #         initial_image_url = parsed.get("initial_image_url")
-        #         concept = parsed.get("concept")
-        #         return initial_image_url, concept
-        #     except json.JSONDecodeError as e:
-        #         logger.error(f"JSON Decode Error: {e} - Data: {json_data}")
-        #         return None, None
-            
-        # return None, None
+        initial_image_url = fields.get("initial_image_url")
+        concept = fields.get("concept")
+
+        self.redis.xack(self.stream_key, self.group_name, msg_id)
+        self.redis.xdel(self.stream_key, msg_id)
+
+        logger.info(f"Popped image from Redis stream: {initial_image_url}, concept: {concept}")
+        return initial_image_url, concept

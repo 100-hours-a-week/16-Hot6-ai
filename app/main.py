@@ -50,28 +50,32 @@ def shutdown_gpu():
 
 # ===== Queue 기반 직렬 실행 설정 =====
 
-def image_worker(redis_client: RedisSentinel):
+def image_worker():
+    redis_client = RedisSentinel()
+    
     while True:
         try:
             image_url, concept = redis_client.pop_original_image()
-            if image_url:
-                try:
-                    logger.info(f"Get Queue Success : {image_url}, {concept}")
-                    run_image_generate(image_url, concept, redis_client)
-                except Exception as e:
-                    logger.error(f"Image task failed: {e}")
-            else:
-                logger.error("Image url is None, skipping task.")
-        except redis.exceptions.TimeoutError as e:
-            logger.error(f"Redis Timeout Error: {e}")
-            logger.warning("[Redis Timeout] Reconnecting to Redis Sentinel...")
+            if not image_url:
+                time.sleep(1)
+                continue
+
+            logger. info(f"Processing image: {image_url}, concept: {concept}")
+
+            try:
+                run_image_generate(image_url, concept, redis_client)
+            except Exception as e:
+                logger.error(f"Error processing image {image_url}: {e}")
+                redis_client.push_completed_image(image_url, None, None)
+        
+        except TimeoutError as e:
+            logger.error(f"Timeout while processing image: {e}")
             time.sleep(1)
             redis_client = RedisSentinel()
+
         except Exception as e:
-            logger.error(f"Unexpected error in worker thread: {e}")
-        # finally:
-        #     task_queue.task_done()
-        
+            logger.error(f"Unexpected error in image worker: {e}")
+            time.sleep(1)
 
 # ===== FastAPI 요청 모델 =====
 # class ImageRequest(BaseModel):
