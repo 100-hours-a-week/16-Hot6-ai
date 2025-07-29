@@ -57,6 +57,7 @@ class RedisSentinel:
                 for k, v in fields.items()
             }
 
+            logger.info(f"Pop original image: {msg_id}")
             return data.get("initial_image_url"), data.get("concept")
         # data = self.redis.blpop("original:images", timeout=0)
         # if data:
