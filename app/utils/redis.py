@@ -1,4 +1,5 @@
 from redis.sentinel import Sentinel
+from redis.exceptions import ResponseError
 from core.config import settings
 import json
 import uuid
@@ -38,7 +39,7 @@ class RedisSentinel:
                 mkstream = True
             )
             logger.info(f"Created Redis stream group: {self.group_name} with start ID: {start_id}")
-        except self.redis.ResponseError as e:
+        except ResponseError as e:
             if "BUSYGROUP" in str(e):
                 logger.info(f"Redis stream group {self.group_name} already exists, skipping creation.")
             else:
